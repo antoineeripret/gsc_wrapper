@@ -36,7 +36,7 @@ I'm more than welcome to receive suggestions or solve issues through GitHub. Nev
 
 First, install the package using: 
 
-`pip install git+https://github.com/antoineeripret/gscwrapper`
+`pip3 install git+https://github.com/antoineeripret/gsc_wrapper`
 
 Then, follow these steps: 
 - Create a new project in the [Google Developers Console](https://console.developers.google.com),
