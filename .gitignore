@@ -1,0 +1,11 @@
+/.DS_Store
+/__pycache__
+/bin
+gscwrapper/exemple.py
+/include
+/lib
+gscwrapper/config
+/pyvenv.cfg
+/share
+gscwrapper/ctr_curve.csv
+gscwrapper/exemple.py
