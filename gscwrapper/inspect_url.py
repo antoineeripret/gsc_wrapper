@@ -44,7 +44,7 @@ class Inspect:
                         "siteUrl": self.webproperty,
                     }
                 response = (
-                    self.webproperty.service.urlInspection()
+                    self.service.urlInspection()
                     .index()
                     .inspect(body=self.raw)
                     .execute()

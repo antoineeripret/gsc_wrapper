@@ -9,3 +9,4 @@ gscwrapper/config
 /share
 gscwrapper/ctr_curve.csv
 gscwrapper/exemple.py
+gscwrapper/test.py
