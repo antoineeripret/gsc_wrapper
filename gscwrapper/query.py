@@ -302,7 +302,6 @@ class Report:
     
     #fonction to analyze n_grams for our keywords 
     def n_grams(self, n=2):
-        from .utils import create_n_grams
         
         #we need the query dimension 
         if 'query' not in self.dimensions:
@@ -313,7 +312,7 @@ class Report:
             .df
             #assign n_grams to each query
             .assign(
-                n_grams = lambda df_:df_['query'].apply(create_n_grams, n=n)
+                n_grams = lambda df_:df_['query'].apply(utils.create_n_grams, n=n)
             )
             #one row pero n_gram
             .explode('n_grams')
@@ -331,7 +330,6 @@ class Report:
     #from a list of URLs or a sitemap
     def active_pages(self,sitemap_url=None, urls=None):
         
-        #from .utils import get_urls_from_sitemap
         import numpy as np
         
         if 'page' not in self.dimensions:
@@ -580,7 +578,6 @@ class Report:
         
         #we neeed some extra libraries for this method 
         from causalimpact import CausalImpact
-        from .utils import get_date_days_before
         import datetime
         
         #interverntion date must be defined
@@ -606,8 +603,8 @@ class Report:
         days = (pd.to_datetime(data['date']).max() - pd.to_datetime(intervention_date)).days
         #get the prior dates 
         max_date = pd.to_datetime(data['date']).max().strftime("%Y-%m-%d")
-        max_before_interenvention = get_date_days_before(intervention_date, days=1)
-        min_before_intervention = get_date_days_before(max_before_interenvention, days=days)
+        max_before_interenvention = utils.get_date_days_before(intervention_date, days=1)
+        min_before_intervention = utils.get_date_days_before(max_before_interenvention, days=days)
 
         #get the interval for the analysis  
         post_period = [intervention_date, max_date]
@@ -662,7 +659,6 @@ class Report:
     
     #extract search volume from dataforSEO 
     def extract_search_volume(self, location_code, client_email, client_password, calculate_cost = True):
-        from .utils import RestClient, return_chunks, create_jobs_and_get_ids, get_search_volume
         #check that the location code is an integer
         if not isinstance(location_code, int):
             raise ValueError('Location code must be an integer.')
@@ -672,7 +668,7 @@ class Report:
             raise ValueError('Your report needs a query dimension to call this method.')
         
         #donwload the valid options for the location code
-        client = RestClient(client_email, client_password)
+        client = utils.RestClient(client_email, client_password)
         r = client.get('/v3/keywords_data/google_ads/locations')
         #if we can't download the data, we stop the process
         if r['status_code'] != 20000:
@@ -683,7 +679,7 @@ class Report:
             raise ValueError('Location code not valid. Check https://docs.dataforseo.com/v3/keywords_data/google_ads/locations/ for the accepted values.')
         
         #we create the list of keywords we want to extract
-        keywords = return_chunks(self.df['query'].unique().tolist())
+        keywords = utils.return_chunks(self.df['query'].unique().tolist())
         
         if calculate_cost:
             #we calculate the cost of the extraction and print it 
@@ -691,9 +687,9 @@ class Report:
         else:
             #we proceed with the extraction 
             #create the jobs and get the ids in dataforSEO
-            jobs_id = create_jobs_and_get_ids(keywords, 'gsc_wrapper', location_code, client)
+            jobs_id = utils.create_jobs_and_get_ids(keywords, 'gsc_wrapper', location_code, client)
             #we wait for the data to be ready to download the results 
-            sv = get_search_volume(jobs_id, client)
+            sv = utils.get_search_volume(jobs_id, client)
             #we merge the data with our initial report
             
             return (
@@ -716,7 +712,6 @@ class Report:
             
     #fonctions to find potential contents to kill 
     def find_potential_contents_to_kill(self, sitemap_url=None, clicks_threshold = 0, impressions_threshold = 0):
-        from .utils import get_urls_from_sitemap
         #we need the page dimension
         if 'page' not in self.dimensions:
             raise ValueError('Your report needs a page dimension to call this method.')
@@ -730,7 +725,7 @@ class Report:
             raise ValueError('Please provide a sitemap_url.')
         
         #download the urle from the sitemap
-        urls = pd.DataFrame(get_urls_from_sitemap(sitemap_url), columns=['loc'])
+        urls = pd.DataFrame(utils.get_urls_from_sitemap(sitemap_url), columns=['loc'])
         
         #return the pages that are in the sitemap but below our thresholds
         return (
@@ -853,15 +848,14 @@ class Report:
     
     #function to check if we have pages in GSC that are not in our sitemap
     def pages_not_in_sitemap(self, sitemap_url):
-        from .utils import get_urls_from_sitemap, check_sitemap_url
         #we need the page dimension
         if 'page' not in self.dimensions:
             raise ValueError('Your report needs a page dimension to call this method.')
         
         #check that we have a correct sitemap URL 
-        if check_sitemap_url(sitemap_url):
+        if utils.check_sitemap_url(sitemap_url):
             #download the urle from the sitemap
-            urls = pd.DataFrame(get_urls_from_sitemap(sitemap_url), columns=['loc'])
+            urls = pd.DataFrame(utils.get_urls_from_sitemap(sitemap_url), columns=['loc'])
             
             return (
                 self
@@ -871,7 +865,6 @@ class Report:
     
     #function to find winners and losers between two period 
     def winners_losers(self, period_from, period_to):
-        from .utils import are_dates_parsable
         from datetime import datetime
         
         #we need to have the page and the date dimensions 
@@ -889,8 +882,8 @@ class Report:
             raise ValueError('Period to must be a list of two elements.')
         
         #check that in these list we have parsable dates 
-        period_from_check = [are_dates_parsable(date) for date in period_from]
-        period_to_check = [are_dates_parsable(date) for date in period_to]
+        period_from_check = [utils.are_dates_parsable(date) for date in period_from]
+        period_to_check = [utils.are_dates_parsable(date) for date in period_to]
         
         if not all(period_from_check) or not all(period_to_check):
             raise ValueError('Periods from must be a list of two parsable dates using the YYYY-MM-DD format.')
