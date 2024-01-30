@@ -331,7 +331,7 @@ class Report:
     #from a list of URLs or a sitemap
     def active_pages(self,sitemap_url=None, urls=None):
         
-        from .utils import get_urls_from_sitemap
+        #from .utils import get_urls_from_sitemap
         import numpy as np
         
         if 'page' not in self.dimensions:
@@ -348,7 +348,7 @@ class Report:
         #if we have a sitemap 
         if sitemap_url:
             #download the urls from the site map
-            urls = pd.DataFrame(get_urls_from_sitemap(sitemap_url), columns=['loc'])
+            urls = pd.DataFrame(utils.get_urls_from_sitemap(sitemap_url), columns=['loc'])
         #otherwlse, just parse the list of urls
         elif urls:
             urls = (
