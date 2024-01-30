@@ -302,7 +302,7 @@ class Report:
     
     #fonction to analyze n_grams for our keywords 
     def n_grams(self, n=2):
-        from utils import create_n_grams
+        from .utils import create_n_grams
         
         #we need the query dimension 
         if 'query' not in self.dimensions:
@@ -331,7 +331,7 @@ class Report:
     #from a list of URLs or a sitemap
     def active_pages(self,sitemap_url=None, urls=None):
         
-        from utils import get_urls_from_sitemap
+        from .utils import get_urls_from_sitemap
         import numpy as np
         
         if 'page' not in self.dimensions:
@@ -580,7 +580,7 @@ class Report:
         
         #we neeed some extra libraries for this method 
         from causalimpact import CausalImpact
-        from utils import get_date_days_before
+        from .utils import get_date_days_before
         import datetime
         
         #interverntion date must be defined
@@ -662,7 +662,7 @@ class Report:
     
     #extract search volume from dataforSEO 
     def extract_search_volume(self, location_code, client_email, client_password, calculate_cost = True):
-        from utils import RestClient, return_chunks, create_jobs_and_get_ids, get_search_volume
+        from .utils import RestClient, return_chunks, create_jobs_and_get_ids, get_search_volume
         #check that the location code is an integer
         if not isinstance(location_code, int):
             raise ValueError('Location code must be an integer.')
@@ -716,7 +716,7 @@ class Report:
             
     #fonctions to find potential contents to kill 
     def find_potential_contents_to_kill(self, sitemap_url=None, clicks_threshold = 0, impressions_threshold = 0):
-        from utils import get_urls_from_sitemap
+        from .utils import get_urls_from_sitemap
         #we need the page dimension
         if 'page' not in self.dimensions:
             raise ValueError('Your report needs a page dimension to call this method.')
@@ -853,7 +853,7 @@ class Report:
     
     #function to check if we have pages in GSC that are not in our sitemap
     def pages_not_in_sitemap(self, sitemap_url):
-        from utils import get_urls_from_sitemap, check_sitemap_url
+        from .utils import get_urls_from_sitemap, check_sitemap_url
         #we need the page dimension
         if 'page' not in self.dimensions:
             raise ValueError('Your report needs a page dimension to call this method.')
@@ -871,7 +871,7 @@ class Report:
     
     #function to find winners and losers between two period 
     def winners_losers(self, period_from, period_to):
-        from utils import are_dates_parsable
+        from .utils import are_dates_parsable
         from datetime import datetime
         
         #we need to have the page and the date dimensions 
