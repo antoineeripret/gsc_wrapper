@@ -92,6 +92,20 @@ The first time you run this code, you'll be asked to visit an URL:
 - Click on "Continue" again 
 - Copy the authorization code and paste it in the input box that will have appeared in your terminal / notebook from where you run the code 
 
+If you prefer to use a service account key, the process is easier and you just have to run the following code. **No need to save the credentials in that case**.  
+
+```python 
+
+account = (
+    gscwrapper
+    .generate_auth(
+        client_config="service_account.json", 
+        service_account_auth=True
+    )
+)
+
+```
+
 ## Saving credentials 
 
 If you wish to save your credentials, to avoid going
@@ -225,6 +239,27 @@ If you are not using the API (working with the [bulk export](https://support.goo
 
 You'll then be able to use any of the available methods. 
 
+Available methods: 
+- [show_data()](#show_data())
+- [ctr_yield_curve()](#ctr_yield_curve())
+- [active_pages()](#active_pages())
+- [cannibalization()](#cannibalization())
+- [forecast()](#forecast())
+- [brand_vs_no_brand()](#brand_vs_no_brand())
+- [keyword_gap()](#keyword_gap())
+- [causal_impact()](#causal_impact())
+- [update_urls()](#update_urls())
+- [extract_search_volume()](#extract_search_volume())
+- [find_potential_contents_to_kill()](#find_potential_contents_to_kill())
+- [find_content_decay()](#find_content_decay())
+- [winners_losers()](#winners_losers())
+- [find_long_tail_keywords()](#find_long_tail_keywords())
+- [find_ctr_outliers()](#find_ctr_outliers())
+- [abcd()](#abcd())
+- [pages_lifespan()](#pages_lifespan())
+- [seasonality_per_day()](#seasonality_per_day())
+- [replace_query_from_list()](#replace_query_from_list())
+
 #### show_data()
 
 |Required dimensions|Required metrics| Output|
@@ -265,7 +300,7 @@ For example, you could get this output.
 |9.0|2.17|67|3087|897|
 |10.0|1.51|73|4841|1250|
 
-#### group_data_by_period()
+### group_data_by_period()
 
 |Required dimensions|Required metrics| Output|
 |:----|:----|:----|
@@ -327,7 +362,7 @@ The outcome: a table telling you which pages from your list are active (based on
 |https://www.website.com/blog/content_2|0.0|78.0|True|False|
 |https://www.website.com/blog/content_3|1.0|161.0|True|True|
 
-### cannibalization() 
+#### cannibalization() 
 
 |Required dimensions|Required metrics| Output|
 |:----|:----|:----|
@@ -360,7 +395,7 @@ This method would return the following table, with a selection of the pages that
 |https://www.website.com/blog/content_1|yyyyy|15|387|62.50|44|34.09| |
 |https://www.website.com/blog/content_2|yyyyy|9|148|37.50|23|39.13| |
 
-### forecast()
+#### forecast()
 
 |Required dimensions|Required metrics| Output|
 |:----|:----|:----|
@@ -382,7 +417,7 @@ You can specify the number of days you want to forecast as the only accepted par
 
 This method returns the DataFrame as created by Prophet, and if you want to understand the column names, have a look at [their documentation](https://facebook.github.io/prophet/). 
 
-### brand_vs_no_brand()
+#### brand_vs_no_brand()
 
 |Required dimensions|Required metrics| Output|
 |:----|:----|:----|
@@ -411,7 +446,7 @@ It returns a clean table with your clicks & impressions over time that allows yo
 |2023-01-07|0.0|11.0|80|5458|
 
 
-### keyword_gap()
+#### keyword_gap()
 
 |Required dimensions|Required metrics| Output|
 |:----|:----|:----|
@@ -439,7 +474,7 @@ This method allows you to perform a similar operation by **comparing the keyword
 
 This method will filter your `df`to keep only the keywords that are not included in your `Report` object. 
 
-### causal_impact()
+#### causal_impact()
 
 |Required dimensions|Required metrics| Output|
 |:----|:----|:----|
@@ -465,7 +500,7 @@ To ensure that the results make sense, **you need to have at least the same amou
 This method will return a `ci`object. Refer to the [documentation](https://pypi.org/project/pycausalimpact/) to understand how you can explore the results. 
 
 
-### update_urls()
+#### update_urls()
 
 |Required dimensions|Required metrics| Output|
 |:----|:----|:----|
@@ -492,7 +527,7 @@ This method simplifies the process:
 As the method just update the object itself, you can then call any other method freely. 
 
 
-### extract_search_volume()
+#### extract_search_volume()
 
 |Required dimensions|Required metrics| Output|
 |:----|:----|:----|
@@ -527,7 +562,7 @@ This method leverages [DataForSEO](https://dataforseo.com/), an API I often reco
 **To avoid any cost-related issue, you need to explicitely set the calculate_cost parameter to `False`to run the extraction.**. For now, **search volume are extracted for Google only**. 
 
 
-### find_potential_contents_to_kill() 
+#### find_potential_contents_to_kill() 
 
 |Required dimensions|Required metrics| Output|
 |:----|:----|:----|
@@ -568,7 +603,7 @@ Please note that you shouldn't just kill contents that have no impressions / cli
 But it speeds a part of this process. 
 
 
-### find_content_decay()
+#### find_content_decay()
 
 |Required dimensions|Required metrics| Output|
 |:----|:----|:----|
@@ -602,7 +637,7 @@ When you get the output, you need to add your industry knowledge to understand w
 Still, it's a good to speed-up the process and come up with a smaller list of contents to update to protect your key positions. 
 
 
-### pages_not_in_sitemap()
+#### pages_not_in_sitemap()
 
 |Required dimensions|Required metrics| Output|
 |:----|:----|:----|
@@ -612,7 +647,7 @@ This method is self-explanatory.
 
 It will allow you to find the pages in your GSC `Report`object that are not included in a sitemap your provide. 
 
-### winners_losers()
+#### winners_losers()
 
 |Required dimensions|Required metrics| Output|
 |:----|:----|:----|
@@ -632,7 +667,7 @@ This method is especially useful after Google Updates. It allows you to **quickl
 
 ```
 
-### find_long_tail_keywords()
+#### find_long_tail_keywords()
 
 |Required dimensions|Required metrics| Output|
 |:----|:----|:----|
@@ -654,7 +689,7 @@ For instance:
 This will simply filter your data to include only keywords that are composed by at least 7 words. 
 
 
-### find_ctr_outliers()
+#### find_ctr_outliers()
 
 |Required dimensions|Required metrics| Output|
 |:----|:----|:----|
@@ -671,6 +706,145 @@ This method allows you to find CTR outliers.
     report 
     .find_ctr_outliers()
 )
+```
+
+#### abcd() 
+
+|Required dimensions|Required metrics| Output|
+|:----|:----|:----|
+|None| None |pd.DataFrame|
+
+This methods allows you to assign an ABCD rank to a metric based on cumulative percentage contribution.
+
+* **A**: belong to the top 50% 
+* **B**: between 50 & 75% 
+* **C**: between 75 and 90% 
+* **D**: between 90 and 100%
+
+For instance, if e run the following code: 
+
+```python 
+
+(
+    webproperty
+    .query
+    .range("2024-01-01", "2024-02-01")
+    .dimensions(['country'])
+    .get()
+    .abcd('clicks')
+ )
+
+```
+
+we could get this table as the output: 
+
+|country|clicks|abcd|
+|:----|:----|:----|
+|mex|5955|A|
+|ecu|1936|B|
+|ven|1447|B|
+|esp|765|C|
+|col|716|C|
+
+
+#### pages_per_day()
+
+|Required dimensions|Required metrics| Output|
+|:----|:----|:----|
+|date / page | None |pd.DataFrame|
+
+This method has been designed thinking about [Google Discover](https://developers.google.com/search/docs/appearance/google-discover?hl=en). You can easily know how many pages has appeared per day using this method. 
+
+```python 
+
+(
+    webproperty
+    .query
+    .range("2024-01-01", "2024-02-01")
+    .dimensions(['date','page'])
+    .get()
+    .pages_per_day()
+ )
+
+```
+
+This would return a table with the number of pages per day, as the name of the method suggest. 
+
+|date|page|
+|:----|:----|
+|2024-01-01|1901|
+|2024-01-02|2544|
+|2024-01-03|2761|
+|2024-01-04|2853|
+|2024-01-05|2473|
+|2024-01-06|2281|
+|2024-01-07|2796|
+
+
+#### pages_lifespan()
+
+|Required dimensions|Required metrics| Output|
+|:----|:----|:----|
+|date / page | None |pd.DataFrame|
+
+Similar function to **pages_per_day()**, but is tells you what is the average lifespan of a page in your dataset. 
+
+#### seasonality_per_day()
+
+|Required dimensions|Required metrics| Output|
+|:----|:----|:----|
+|date | clicks / impressions |pd.DataFrame|
+
+This method allows you to quickly understand the weekly seasonnality you have in your data. 
+
+```python 
+
+(
+    webproperty
+    .query
+    .range("2024-01-01", "2024-02-01")
+    .dimensions(['date'])
+    .get()
+    .seasonality_per_day()
+ )
+
+```
+
+It would return a table as the following: 
+
+|date|click|impressions|
+|:----|:----|:----|
+|Monday|2218|352148|
+|Tuesday|2456|399690|
+|Wednesday|2532|414933|
+|Thursday|2312|381517|
+|Friday|1081|195331|
+|Saturday|827|142410|
+|Sunday|1267|210677|
+
+#### replace_query_from_list()
+
+|Required dimensions|Required metrics| Output|
+|:----|:----|:----|
+|query | None |pd.DataFrame|
+
+When you are working on a project where pages are created at scale, you **don't want to understand what are the most common keywords, but are the most common structures**. 
+
+To achieve this objective, this method allow us to **replace any occurence of an element of a list in our query column.** For instance, if you have a travel website, you won't have "flight paris barcelona" but "flight _element_ _element_" assuming that you provide a list of cities. 
+
+**This will considerably speed-up your analysis to optimize your templates.** 
+
+```python 
+
+(
+    webproperty
+    .query
+    .range("2024-01-01", "2024-02-01")
+    .dimensions(['query'])
+    .get()
+    .replace_query_from_list(word_list)
+ )
+
 ```
 
 

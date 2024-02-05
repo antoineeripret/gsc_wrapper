@@ -10,3 +10,7 @@ gscwrapper/config
 gscwrapper/ctr_curve.csv
 gscwrapper/exemple.py
 gscwrapper/test.py
+*.pyc
+*.pyc
+gscwrapper/__pycache__/auth.cpython-310.pyc
+test.py

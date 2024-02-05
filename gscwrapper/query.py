@@ -160,10 +160,10 @@ class Query:
             #retrieve the data 
             chunk = self.service.searchanalytics().query(siteUrl=self.webproperty, body=self.raw).execute()
             #add our data to the report list we'll return 
-            total_rows += len(chunk['rows'])
-            report.append(chunk['rows'])
+            total_rows += len(chunk.get('rows', []))
+            report.append(chunk.get('rows', []))
             #update the is_complete variable if we don't have more data 
-            if len(chunk['rows'])<25000:
+            if len(chunk.get('rows', []))<25000:
                 is_complete = True
             #else, update the startRow in our request body 
             else: 
@@ -299,33 +299,7 @@ class Report:
                 date = lambda df_: df_['date'].dt.strftime('%Y-%m-%d')
             )
         )
-    
-    #fonction to analyze n_grams for our keywords 
-    def n_grams(self, n=2):
-        
-        #we need the query dimension 
-        if 'query' not in self.dimensions:
-            raise ValueError('Your report needs a query dimension to call this method.')
-        
-        return (
-            self 
-            .df
-            #assign n_grams to each query
-            .assign(
-                n_grams = lambda df_:df_['query'].apply(utils.create_n_grams, n=n)
-            )
-            #one row pero n_gram
-            .explode('n_grams')
-            #NA ==> query has less than N words 
-            .dropna()
-            .groupby('n_grams')
-            .agg(
-                {'clicks': 'sum', 'impressions': 'sum','n_grams': 'count'}
-            )
-            .rename(columns = {'n_grams': 'kw_count'})
-            .sort_values('clicks', ascending=False)
-        )
-    
+
     #funtion to know if a page is active (has clicks or has impressions)
     #from a list of URLs or a sitemap
     def active_pages(self,sitemap_url=None, urls=None):
@@ -1019,8 +993,103 @@ class Report:
         
         return df 
         
+    def abcd(self, metric='clicks'):
+    #Assign an ABCD class and rank to a metric based on cumulative percentage contribution
+    #Based on https://github.com/practical-data-science/ecommercetools/blob/master/ecommercetools/seo/google_search_console.py 
+    #even if code is different, the logic is the same
         
-        #lifespan of a page (in Discover) 
-        #seasonnality per day 
-        #replace a list of queries by something special for n_gra
-
+        #check that we have the metric in our metrics
+        if metric not in self.metrics:
+            raise ValueError('Your report needs the metric you want to use to call this method.')
+        
+        return (
+            self
+            .df 
+            .sort_values(metric, ascending=False)
+            .assign(
+                metric_cumsum = lambda df_:round(100*df_[metric].cumsum()/df_[metric].sum(), 2),
+                abcd = lambda df_:(
+                    df_
+                    ['metric_cumsum']
+                    .case_when(
+                        caselist = [
+                            (df_['metric_cumsum'].between(0, 50, inclusive='left'), 'A'),
+                            (df_['metric_cumsum'].between(50, 75, inclusive='left'), 'B'),
+                            (df_['metric_cumsum'].between(75, 90, inclusive='left'), 'C'),
+                            (df_['metric_cumsum'].between(90, 100, inclusive='both'), 'D'),
+                        ]
+                    )
+                )
+            )
+            .drop('metric_cumsum', axis=1)
+        )
+    
+    def pages_per_day(self):
+        #check that we have the date and page dimensions
+        if not all(elem in self.dimensions for elem in ['date','page']):
+            raise ValueError('Your report needs a date and a page dimension to call this method.')
+        
+        return (
+            self
+            .df
+            .assign(
+                date = lambda df_: pd.to_datetime(df_['date']).dt.strftime('%Y-%m-%d')
+            )
+            .sort_values('date', ascending=True)
+            .groupby('date')
+            .agg({'page': 'nunique'})
+        )
+        
+    def pages_lifespan(self):
+        #check that we have the date and page dimensions
+        if not all(elem in self.dimensions for elem in ['date','page']):
+            raise ValueError('Your report needs a date and a page dimension to call this method.')
+        
+        return (
+            self
+            .df 
+            .groupby('page', as_index=False)
+            .agg({'date':'nunique'})
+            .date
+            .value_counts()
+            .reset_index()
+            .rename(columns={'date':'duration (days)'})
+        )
+    
+    def seasonality_per_day(self):
+        #check that we have the date dimension
+        if 'date' not in self.dimensions:
+            raise ValueError('Your report needs a date dimension to call this method.')
+        
+        return (
+            self.df
+            .assign(
+                date=lambda df_: pd.to_datetime(df_['date']).dt.day_name()
+            )
+            .assign(
+                date=lambda df_: pd.Categorical(df_['date'], categories=[
+                    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+                    ordered=True)
+            )
+            .sort_values('date', ascending=True)
+            .groupby('date')
+            .agg({'clicks': 'sum', 'impressions': 'sum'})
+        )
+    
+    def replace_query_from_list(self, list_to_replace):
+        from functools import reduce
+        #Function to apply replacements
+        def replace_element(column, element):
+            return column.str.replace(element, "_element_")
+        
+        #we need to have the query dimension
+        if 'query' not in self.dimensions:
+            raise ValueError('Your report needs a query dimension to call this method.')
+        
+        return (
+            self 
+            .df 
+            .assign(
+                query_replaced = reduce(replace_element, list_to_replace, self.df['query'])
+            )
+        )

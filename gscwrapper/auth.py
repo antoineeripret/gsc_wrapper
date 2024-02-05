@@ -20,8 +20,32 @@ OAUTH_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly"
 from apiclient import discovery
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
+from google.oauth2 import service_account
 
-def generate_auth(client_config, credentials=None, serialize=None, flow="console"):
+def generate_auth(
+    client_config, 
+    credentials=None, 
+    serialize=None, 
+    flow="console", 
+    service_account_auth=False):
+    
+    if service_account_auth:
+        credentials = (
+            service_account
+            .Credentials
+            .from_service_account_file(
+                filename=client_config,
+                scopes=['https://www.googleapis.com/auth/webmasters.readonly']
+            )
+        )
+        
+        service = discovery.build(
+        serviceName='searchconsole',
+        version='v1',
+        credentials=credentials,
+        cache_discovery=False,
+    )
+        return Account(service, credentials)
 
     if not credentials:
         if isinstance(client_config, collections.abc.Mapping):
