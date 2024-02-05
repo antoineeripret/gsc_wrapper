@@ -726,11 +726,7 @@ For instance, if e run the following code:
 ```python 
 
 (
-    webproperty
-    .query
-    .range("2024-01-01", "2024-02-01")
-    .dimensions(['country'])
-    .get()
+    report
     .abcd('clicks')
  )
 
@@ -758,11 +754,7 @@ This method has been designed thinking about [Google Discover](https://developer
 ```python 
 
 (
-    webproperty
-    .query
-    .range("2024-01-01", "2024-02-01")
-    .dimensions(['date','page'])
-    .get()
+    report
     .pages_per_day()
  )
 
@@ -800,11 +792,7 @@ This method allows you to quickly understand the weekly seasonnality you have in
 ```python 
 
 (
-    webproperty
-    .query
-    .range("2024-01-01", "2024-02-01")
-    .dimensions(['date'])
-    .get()
+    report
     .seasonality_per_day()
  )
 
@@ -837,11 +825,7 @@ To achieve this objective, this method allow us to **replace any occurence of an
 ```python 
 
 (
-    webproperty
-    .query
-    .range("2024-01-01", "2024-02-01")
-    .dimensions(['query'])
-    .get()
+    report
     .replace_query_from_list(word_list)
  )
 
