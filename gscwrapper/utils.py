@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 import requests
 import xml.etree.ElementTree as ET
-import validators
     
 
 def get_date_days_ago(days=30):
@@ -60,8 +59,7 @@ def get_urls_from_sitemap(sitemap_url):
 #function to ensure that we have a proper value for the sitemap url 
 def check_sitemap_url(sitemap_url):
     #check that we have an URL
-    if not validators.url: 
-        raise ValueError('The sitemap URL provided is not valid.')
+    #TBD 
     if not sitemap_url.endswith('.xml'):
         raise ValueError('The sitemap URL provided is not valid.')
     return True 
