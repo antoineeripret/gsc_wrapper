@@ -14,3 +14,4 @@ gscwrapper/test.py
 *.pyc
 gscwrapper/__pycache__/auth.cpython-310.pyc
 test.py
+data.csv

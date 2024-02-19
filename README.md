@@ -607,7 +607,7 @@ But it speeds a part of this process.
 
 |Required dimensions|Required metrics| Output|
 |:----|:----|:----|
-|page / date |clicks | pd.DataFrame|
+|page / date |clicks or impressions | pd.DataFrame|
 
 [Content Decay](https://www.clearscope.io/blog/content-decay) is something we always have to investigate to ensure that our best performing contents always stay at the top of the SERPs. 
 
@@ -618,17 +618,29 @@ It is indeed easier to rank better for an existing content than ranking a new on
 (
     report 
     .find_content_decay(
-        threshold_decay=0.25, 
-        threshold_clicks=100
-    )
+        threshold_metric=100,
+        #to choose between clicks and impressions 
+        metric = 'clicks', 
+        threshold_decay=0.1, 
+        #choose between query or page 
+        type='query', 
+        #to choose between week and month 
+        period='month')
+ )
 )
 
 ```
 
 This code would return a list of contents with the following characteristics: 
 
-* During the last (**full**) month of available data in the `Report` object, the page generating at least 25% less clicks than what it had during the peak month 
+* During the last (**full**) month of available data in the `Report` object, the page generating at least 10% less clicks than what it had during the peak month 
 * During its peak, the content generated at least 100 clicks 
+
+For instance: 
+
+|query|metric_last_period|metric_max|period_max|decay|decay_abs|
+| -------- | ------- |------- |------- |------- |------- |
+|xxxxx|39585|78269|2023-04|0.494244|38684|
 
 When you get the output, you need to add your industry knowledge to understand what is going on because: 
 * The seasonnality can affect the outcome. Indeed, if your peak month is August and your run the analysis in December, all your contents may be "decaying". 

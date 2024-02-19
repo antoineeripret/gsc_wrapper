@@ -331,6 +331,8 @@ class Report:
         return ( 
             self
             .df
+            .groupby('page', as_index=False)
+            .agg({'clicks': 'sum', 'impressions': 'sum'})
             #merge with our list of URLS 
             .merge(
                 urls,
@@ -472,6 +474,8 @@ class Report:
         df = (
             self 
             .df
+            .groupby('date', as_index=False)
+            .agg({'clicks': 'sum'})
             .rename(
                 columns = {'date': 'ds', 'clicks': 'y'}
             )
@@ -571,6 +575,8 @@ class Report:
             self
             .df 
             .filter(items=['date', 'clicks'])
+            .groupby('date', as_index=False)
+            .agg({'clicks': 'sum'})
         )
         
         #calculate the number of days between the last data point and the intervention date 
@@ -705,7 +711,7 @@ class Report:
         return (
             urls
             .merge(
-                self.df,
+                self.df.groupby('page', as_index=False).agg({'clicks': 'sum', 'impressions': 'sum'}),
                 left_on = 'loc',
                 right_on = 'page',
                 how = 'left'
@@ -745,13 +751,19 @@ class Report:
     
     #function to find potential contents to update
     #we use the content decay approach here 
-    def find_content_decay(self, threshold_decay=0.25, threshold_clicks=100):
+    def find_content_decay(
+        self, threshold_decay=0.25,
+        metric='clicks',
+        threshold_metric=100, 
+        type='page', 
+        period='week'
+        ):
         #check that we have the page and date dimensions 
-        if not all(elem in self.dimensions for elem in ['page','date']):
+        if not all(elem in self.dimensions for elem in [type,'date']):
             raise ValueError('Your report needs a page and a date dimension to call this method.')
         
         #check that we have the clicks metrics 
-        if 'clicks' not in self.metrics:
+        if metric not in self.metrics:
             raise ValueError('Your report needs clicks as a metric to call this method.')
         
         #threshold must be a float between 0.01 and 1
@@ -761,11 +773,18 @@ class Report:
             raise ValueError('Threshold must be between 0.01 and 1.')
         
         #threadhold for clicks must be a positive integer 
-        if not isinstance(threshold_clicks, int):
+        if not isinstance(threshold_metric, int):
             raise ValueError('Threshold must be an integer.')
-        if threshold_clicks < 0:
+        if threshold_metric < 0:
             raise ValueError('Threshold must be a positive integer.')
         
+        #period must be either week or month 
+        if period not in ['week','month']:
+            raise ValueError('Period must be either week or month')
+        
+        #type must be either page or query 
+        if type not in ['page','query']:
+            raise ValueError('Type must be either page or query')
         
         #cut the df to have complete months only
         #we start by converting the date to a datetime object
@@ -778,14 +797,30 @@ class Report:
         )
         #Find the start and end of the full months
         start_date = df['date'].min()
-        #if this is not the first day of the month, we want the first day of the following month 
-        if start_date.day != 1:
-            start_date = (start_date + pd.offsets.MonthBegin(1))
+        if period == 'month': 
+            #used later in the final data manipulation 
+            date_format = '%Y-%m'
+            #if this is not the first day of the month, we want the first day of the following month 
+            if start_date.day != 1:
+                start_date = (start_date + pd.offsets.MonthBegin(1))
         
-        #do the same for the end date
-        end_date = df['date'].max()
-        if end_date.is_month_end == False:
-            end_date = (end_date - pd.offsets.MonthEnd(1))
+            #do the same for the end date
+            end_date = df['date'].max()
+            if end_date.is_month_end == False:
+                end_date = (end_date - pd.offsets.MonthEnd(1))
+        
+        elif period == 'week':
+            #used later in the final data manipulation 
+            date_format = '%Y-%U'
+            #if this is not the first day of the week, we want the first day of the following week 
+            if start_date.dayofweek != 0:
+                start_date = (start_date + pd.offsets.Week(0))
+            
+            #do the same for the end date
+            end_date = df['date'].max()
+            if end_date.dayofweek != 6:
+                #get prevous monday
+                end_date = (end_date + pd.offsets.Week(0))
 
         df = (
             df
@@ -794,26 +829,34 @@ class Report:
             #.query('date >= @start_date & date <= @end_date')
             #create a yearMonth column
             .assign(
-                yearMonth = lambda df_: df_['date'].dt.strftime('%Y-%m')
+                date_period = lambda df_: df_['date'].dt.strftime(date_format)
             )
             #group by page and date 
-            .groupby(['page','yearMonth'], as_index=False)
-            .agg({'clicks': 'sum'})
+            .groupby([type,'date_period'], as_index=False)
+            .agg({metric: 'sum'})
             .assign(
                 #get the max number of clicks per page 
-                clicks_max = lambda df_: df_.groupby('page')['clicks'].transform('max')
+                metric_max = lambda df_: df_.groupby(type)[metric].transform('max'), 
+                #get the date of the max period 
+                period_max = lambda df_:(
+                    df_
+                    .groupby([type,'date_period'], as_index=False)
+                    .agg({metric:'sum'})
+                    .sort_values(metric, ascending=False)['date_period']
+                    .iloc[0]
+                )
             )
             #remove pages with less than X clicks based on the threshold
-            .query('clicks_max >= @threshold_clicks')
+            .query('metric_max >= @threshold_metric')
             #reame column to better reflect what we have
-            .rename(columns = {'clicks': 'clicks_last_month'})
+            .rename(columns = {metric: 'metric_last_period'})
             #keep only the last month
-            .query('yearMonth == @end_date.strftime("%Y-%m")')
+            .query('date_period == @end_date.strftime(@date_format)')
             .assign(
-                decay = lambda df_: 1 - df_['clicks_last_month'] / df_['clicks_max'], 
-                decay_abs = lambda df_: df_['clicks_max'] - df_['clicks_last_month']
+                decay = lambda df_: 1 - df_['metric_last_period'] / df_['metric_max'], 
+                decay_abs = lambda df_: df_['metric_max'] - df_['metric_last_period']
             )
-            .drop('yearMonth', axis = 1)
+            .drop('date_period', axis = 1)
             .query('decay >= @threshold_decay')
             .sort_values('decay_abs', ascending=False)
         )
@@ -882,12 +925,16 @@ class Report:
         df_from = (
             self
             .df
+            .groupby(['page','date'], as_index=False)
+            .agg({'clicks': 'sum'})
             .query('@period_from[0] <= date <= @period_from[1]')
         )
         
         df_to = (
             self
             .df
+            .groupby(['page','date'], as_index=False)
+            .agg({'clicks': 'sum'})
             .query('@period_to[0] <= date <= @period_to[1]')
         )
         
@@ -902,7 +949,7 @@ class Report:
             )
             #we assign a value based on either it is a winner or a loser 
             .assign(
-                diff = lambda df_:df_.metric_after - df_.clicks_before, 
+                diff = lambda df_:df_.clicks_after - df_.clicks_before, 
                 winner = lambda df_:df_.diff > 0, 
             )
         )
@@ -1048,9 +1095,12 @@ class Report:
         return (
             self
             .df 
+            #group by page
             .groupby('page', as_index=False)
+            #get the number of unique dates by page 
             .agg({'date':'nunique'})
             .date
+            #summarize 
             .value_counts()
             .reset_index()
             .rename(columns={'date':'duration (days)'})
@@ -1064,13 +1114,16 @@ class Report:
         return (
             self.df
             .assign(
+                #get the day of the week 
                 date=lambda df_: pd.to_datetime(df_['date']).dt.day_name()
             )
             .assign(
+                #reorder from Monday to Sunday 
                 date=lambda df_: pd.Categorical(df_['date'], categories=[
                     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
                     ordered=True)
             )
+            #group by day of the week
             .sort_values('date', ascending=True)
             .groupby('date')
             .agg({'clicks': 'sum', 'impressions': 'sum'})
@@ -1090,6 +1143,7 @@ class Report:
             self 
             .df 
             .assign(
+                #freduce funtion to apply the replace_element function to the query column
                 query_replaced = reduce(replace_element, list_to_replace, self.df['query'])
             )
         )

@@ -9,7 +9,6 @@ setup(
           'python-dateutil>=2.7.3',
           'google-auth>=1.5.0,<2dev',
           'google-auth-oauthlib>=0.2.0',
-          'validators==0.22.0', 
           'pandas==2.2.0', 
           'tqdm==4.66.1', 
           'prophet==1.1.5',

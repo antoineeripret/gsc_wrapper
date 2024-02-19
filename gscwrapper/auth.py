@@ -26,7 +26,7 @@ def generate_auth(
     client_config, 
     credentials=None, 
     serialize=None, 
-    flow="console", 
+    flow="web", 
     service_account_auth=False):
     
     if service_account_auth:
