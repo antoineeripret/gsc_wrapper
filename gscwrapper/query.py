@@ -877,7 +877,7 @@ class Report:
             return (
                 self
                 .df
-                .query('page.isin(@urls.loc)==False')
+                .query('page.isin(@urls["loc"])==False')
             )
     
     #function to find winners and losers between two period 
