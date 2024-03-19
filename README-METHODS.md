@@ -53,7 +53,7 @@ To avoid unexpected cost, by default a method will trigger a [dry run](https://c
 
 ```
 
-To actually run the code, you need to add the `define_estimate_cost(value=True)` before the method name. 
+To actually run the code, you need to add the `define_estimate_cost(value=False)` before the method name. 
 
 ```python 
 (
@@ -65,7 +65,7 @@ To actually run the code, you need to add the `define_estimate_cost(value=True)`
     )
     .filter('url','vol','contains')
     .get()
-    .define_estimate_cost(value=True)
+    .define_estimate_cost(value=False)
     .group_data_by_period('W')
 )
 ```

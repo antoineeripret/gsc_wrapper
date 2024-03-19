@@ -147,8 +147,9 @@ class Report_BQ:
         pandas_gbq.context.project = self.dataset.split('.')[0]
     
     
-    def define_estimate_cost(self, value=False):
-        self.estimate_cost = value
+    def define_estimate_cost(self, value=True):
+        if not value: 
+            self.estimate_cost = False
         return self 
     
     def custom_query(self, sql):
