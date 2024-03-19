@@ -77,6 +77,7 @@ Most of them are available for both BQ and the API. Some of them just for the AP
 
 - [show_data()](#show_data)
 - [ctr_yield_curve()](#ctr_yield_curve)
+- [group_data_by_period()](#group_data_by_period)
 - [active_pages()](#active_pages)
 - [cannibalization()](#cannibalization)
 - [forecast()](#forecast)
@@ -101,7 +102,7 @@ Please note that whil there are some checks done for the API methods, almost non
 
 |Required dimensions|Required metrics| Output|BQ ready|
 |:----|:----|:----|:----|
-|None|None|pd.DataFrame|:white_check_mark:|
+|None|None|pd.DataFrame|:x|
 
 
 This method is pretty straight-forward. It returns your data as a Pandas DataFrame. Useful to check what the API has returned and perform ad-hoc analysis that are not covered by the other methods from this library. 

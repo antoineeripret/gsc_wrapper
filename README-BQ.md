@@ -39,7 +39,7 @@ To query data from your dataset, you can filter the data you retrieve based on:
 
 ```python 
 report = (
-    webproperty
+    conn
     .query
     .range(start="2023-01-01", stop="2023-02-01")
     .get()
@@ -52,9 +52,11 @@ report = (
 OPERATORS = ['equals','notEquals','contains','notContains','includingRegex','excludingRegex']
 ```
 
+**IMPORTANT**: please note that the `page` dimension in the API is called `url` in BigQuery !! 
+
 ```python 
 report = (
-    webproperty
+    conn
     .query
     .range(start="2023-01-01", stop="2023-02-01")
     .filter("page", "blog", "contains")

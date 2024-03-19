@@ -30,6 +30,9 @@ I've decided to create my own based on my most common needs as a SEO profesionna
 - [Installation Instructions (BQ)](./README-BQ.md)
 - [List of methods](./README-METHODS.md)
 
+## Can I run it in a Jupyter Notebook? 
+
+While I haven't debugged my library on Colab and other similar products, I use (extensively) Jupyter notebooks (through VS Code) on my local machine, and it works perfectly. If you have any issue, please let me know and I'll have a look. 
 
 ## Suggestions? Issues? 
 

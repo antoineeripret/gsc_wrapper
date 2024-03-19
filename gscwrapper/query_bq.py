@@ -147,7 +147,7 @@ class Report_BQ:
         pandas_gbq.context.project = self.dataset.split('.')[0]
     
     
-    def estimate_cost(self, value=False):
+    def define_estimate_cost(self, value=False):
         self.estimate_cost = value
         return self 
     
@@ -306,7 +306,7 @@ class Report_BQ:
                 and 
                 query is not null
                 and 
-                NOT regexp_contains(query, {'|'.join(brand_variants)})
+                NOT regexp_contains(query, "({'|'.join(brand_variants)})")
                 group by query, url   
                 ), 
             data_per_page AS (
@@ -733,7 +733,7 @@ class Report_BQ:
             WHERE 
             data_date BETWEEN "{self.dates['startDate']}" and "{self.dates['endDate']}"
             {self.filters}
-            AND ARRAY_LENGTH(SPLIT(query, ' ')) >= @number_of_words
+            AND ARRAY_LENGTH(SPLIT(query, ' ')) >= {number_of_words}
             GROUP BY query
             """
         
@@ -759,7 +759,7 @@ class Report_BQ:
                 ROUND((sum_position/impressions)+1) as position, 
                 SUM(clicks) as clicks, 
                 SUM(impressions) as impressions
-                FROM `{self.dataset}.searchconsole.searchdata_url_impression` 
+                FROM `{self.dataset}.searchdata_url_impression` 
                 WHERE 
                 data_date BETWEEN "{self.dates['startDate']}" and "{self.dates['endDate']}"
                 {self.filters}
@@ -791,7 +791,7 @@ class Report_BQ:
 
             select 
             ctr_data.query, 
-            ctr_data.position, 
+            CAST(ctr_data.position as string) as position, 
             data_per_query.clicks_query, 
             data_per_query.impressions_query, 
             round(data_per_query.clicks_query/data_per_query.impressions_query, 2) as real_ctr
@@ -817,7 +817,7 @@ class Report_BQ:
                 .rename({'ctr':'expected_ctr'}, axis=1)
                 #calculate the diff between expected and real clicks 
                 .assign(
-                    loss = lambda df_:round(df_.impressions*(df_.expected_ctr - df_.real_ctr)/100)
+                    loss = lambda df_:round(df_.impressions_query*(df_.expected_ctr - df_.real_ctr)/100)
                 )
                 #we order by loss 
                 .sort_values(by='loss', ascending=False)
@@ -845,31 +845,33 @@ class Report_BQ:
         
         sql = f"""
             WITH raw_data AS (
+                select 
                 SUM({metric}) as {metric}, 
-                {', '.join(dimensions)}
-                FROM `{self.dataset}.searchconsole.searchdata_url_impression` 
+                {','.join(dimensions)}
+                FROM `{self.dataset}.searchdata_url_impression` 
                 WHERE 
                 data_date BETWEEN "{self.dates['startDate']}" and "{self.dates['endDate']}"
                 {self.filters}
-                group by {', '.join(dimensions)}
+                group by {','.join(dimensions)}
             ), 
             cumsum AS (
                 select
-                *, 
-                SUM({metric}) OVER (ORDER BY {metric} DESC) / SUM({metric}) AS metric_cumsum
+                {','.join(dimensions)},
+                SUM({metric}) OVER (ORDER BY {metric} DESC) AS metric_cumsum
                 from raw_data
+                group by {metric}, {','.join(dimensions)}
             ), 
             cumsum_pct AS (
                 select 
-                {', '.join(dimensions)},
-                clicks, 
-                ROUND(100*metric_cumsum/(select sum(clicks) from cumsum),2) as metric_pct
+                {','.join(dimensions)},
+                metric_cumsum, 
+                ROUND(100*metric_cumsum/(select max(metric_cumsum) from cumsum),2) as metric_pct
                 from cumsum
             )
 
             select 
-            {' ,'.join(dimensions)},
-            {metric},
+            {','.join(dimensions)},
+            metric_pct,
             CASE 
                 WHEN metric_pct < 50 THEN 'A'
                 WHEN metric_pct < 75 THEN 'B'
@@ -896,7 +898,8 @@ class Report_BQ:
             WHERE 
             data_date BETWEEN "{self.dates['startDate']}" and "{self.dates['endDate']}"
             {self.filters}
-            GROUP BY date asc
+            GROUP BY date 
+            order by date asc 
             """
         
         if self.estimate_cost:
@@ -911,7 +914,7 @@ class Report_BQ:
         sql = f"""
             WITH raw_data AS (
                 SELECT 
-                COUNT(DISTINCT(data_date)) as duration (days),
+                COUNT(DISTINCT(data_date)) as duration_days,
                 url, 
                 FROM `{self.dataset}.searchdata_url_impression`
                 WHERE 
@@ -919,6 +922,13 @@ class Report_BQ:
                 {self.filters}
                 GROUP BY url 
             )
+            
+            select 
+            COUNT(url) as pages, 
+            duration_days
+            from raw_data 
+            group by duration_days
+            order by duration_days desc
             """
         
         if self.estimate_cost:
@@ -935,7 +945,7 @@ class Report_BQ:
             SUM(clicks) AS clicks, 
             SUM(impressions) AS impressions, 
             FORMAT_DATE('%A', data_date) AS date
-            FROM `{self.dataset}.searchdata_site_impression`
+            FROM `{self.dataset}.searchdata_url_impression`
             WHERE 
             data_date BETWEEN "{self.dates['startDate']}" and "{self.dates['endDate']}"
             {self.filters}
