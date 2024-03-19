@@ -675,25 +675,23 @@ class Report_BQ:
         sql_from = f"""
             SELECT 
             url,
-            data_date as date,
             SUM(clicks) as clicks
             FROM `{self.dataset}.searchdata_url_impression`
             WHERE 
             data_date BETWEEN "{period_from[0]}" and "{period_from[1]}"
             {self.filters}
-            GROUP BY url, date
+            GROUP BY url
             """
         
         sql_to = f"""
             SELECT 
             url,
-            data_date as date,
             SUM(clicks) as clicks
             FROM `{self.dataset}.searchdata_url_impression`
             WHERE 
             data_date BETWEEN "{period_to[0]}" and "{period_to[1]}"
             {self.filters}
-            GROUP BY url, date
+            GROUP BY url
             """
             
         if self.estimate_cost:
@@ -714,7 +712,7 @@ class Report_BQ:
                 #we assign a value based on either it is a winner or a loser 
                 .assign(
                     diff = lambda df_:df_.clicks_after - df_.clicks_before, 
-                    winner = lambda df_:df_.diff > 0, 
+                    winner = lambda df_:df_['diff'] > 0, 
                 )
             )
         
