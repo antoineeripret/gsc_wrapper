@@ -74,7 +74,7 @@ To actually run the code, you need to add the `define_estimate_cost(value=False)
 
 Note that the `Query-BQ` object has a `table_to_use` attribute. This attribute is defined based on the dimensions that you use in your `filter()` calls. If all of them are included in the `searchdata_site_impression`, this table will be used. Otherise, `searchdata_url_impression`. 
 
-- This is essential to improve costs. The `searchdata_url_impression` is usually smaller. Querying it will therefore be cheaper. 
+- This is essential to improve costs. The `searchdata_site_impression` is usually smaller. Querying it will therefore be cheaper. 
 - In some cases, the `searchdata_url_impression` need to be used anyway and it is therefore hard-coded in the logic. 
 
 
