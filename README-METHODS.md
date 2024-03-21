@@ -31,9 +31,10 @@ You'll then be able to use any of the available methods.
 
 ## Logic (BQ) 
 
-For BigQuery, the logic is different. When you call a method, a SQL code is generated and sent to BQ through the [Pandas GBQ library](https://pandas-gbq.readthedocs.io/en/latest/). For any given method, two calls are done: 
+For BigQuery, the logic is different. When you call a method, a SQL code is generated and sent to BQ through the [Pandas GBQ library](https://pandas-gbq.readthedocs.io/en/latest/). For any given method, two calls are usually done: 
 - A first one (free) to check that the dates in your conditions are included in your dataset 
 - A second one (cost can vary) to retrieve your data 
+- In some cases, a third can also be executed (usually when we compare results for two periods of time)
 
 To avoid unexpected cost, by default a method will trigger a [dry run](https://cloud.google.com/bigquery/docs/samples/bigquery-query-dry-run) and returns the cost of the query. **This method assumes €5 per TB consumed, so adjust the price accordingly based on your local cost.**  
 
@@ -71,6 +72,12 @@ To actually run the code, you need to add the `define_estimate_cost(value=False)
 ```
 
 
+Note that the `Query-BQ` object has a `table_to_use` attribute. This attribute is defined based on the dimensions that you use in your `filter()` calls. If all of them are included in the `searchdata_site_impression`, this table will be used. Otherise, `searchdata_url_impression`. 
+
+- This is essential to improve costs. The `searchdata_url_impression` is usually smaller. Querying it will therefore be cheaper. 
+- In some cases, the `searchdata_url_impression` need to be used anyway and it is therefore hard-coded in the logic. 
+
+
 ## List of methods 
 
 Most of them are available for both BQ and the API. Some of them just for the API (this is indicated in the documentation). 
@@ -102,7 +109,7 @@ Please note that whil there are some checks done for the API methods, almost non
 
 |Required dimensions|Required metrics| Output|BQ ready|
 |:----|:----|:----|:----|
-|None|None|pd.DataFrame|:x|
+|None|None|pd.DataFrame|:x:|
 
 
 This method is pretty straight-forward. It returns your data as a Pandas DataFrame. Useful to check what the API has returned and perform ad-hoc analysis that are not covered by the other methods from this library. 

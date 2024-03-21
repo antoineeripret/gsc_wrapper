@@ -34,7 +34,9 @@ def generate_auth(
     
     if bigquery:
         if not bigquery_dataset:
-            raise ValueError('You must provide a project name.')
+            raise ValueError('You must provide a dataset name.')
+        if len(bigquery_dataset.split('.')) != 2:
+            raise ValueError('Dataset name must be in the format project_id.dataset_name')
         credentials = (
             service_account
             .Credentials

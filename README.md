@@ -34,11 +34,15 @@ I've decided to create my own based on my most common needs as a SEO profesionna
 
 While I haven't debugged my library on Colab and other similar products, I use (extensively) Jupyter notebooks (through VS Code) on my local machine, and it works perfectly. If you have any issue, please let me know and I'll have a look. 
 
+Unfortunately, I can't fix an issue that has to do with how some companies handle their dependencies (enforcing a rule to prevent a library from updating for instance). 
+
 ## Suggestions? Issues? 
 
-I'm more than welcome to receive suggestions or solve issues through GitHub. Nevertheless: 
+You're more than welcome to send suggestions or raise issues through GitHub. Nevertheless: 
 
+* **I cannot solve an issue I'm not aware of**: please provide context. 
+* **I try to stick to generic use cases**: we all have ad-hoc analysis we'd love to speed-up. But I can't include everything in this library. 
 * **The code is extensively commented** to make it readable for everyone, even if you don't master Python. If you have a question on how a method works under the hood, please have a look at the code first. 
 * **I'm not a developer** and this is, by far, the most complex project I had to work on by myself. I try to stick to concepts I understand and I won't update my code just because I'm not using a best practice here and there. 
-* **I do it for free** and hence I have to prioritize my (paid) work and my personnal life over this library. 
+* **I do it for free** and hence I have to prioritize my (paid) work and my personnal life over this library. I use this library almost every day though, so it's in my best interest to fix bugs ;) 
 

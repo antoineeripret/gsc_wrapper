@@ -6,8 +6,10 @@ from google.cloud import bigquery
 
 OPERATORS = ['equals','notEquals','contains','notContains','includingRegex','excludingRegex']
 OPERATORS_BQ  = ['=','!=','LIKE','NOT LIKE','REGEXP_CONTAINS','NOT REGEXP_CONTAINS']
-DIMENSIONS_SITE = ['site_url','url','query','is_anonymized_query','country','search_type','device']
+DIMENSIONS_SITE = ['site_url','query','is_anonymized_query','country','search_type','device']
 DIMENSIONS_URL = [
+    'url',
+    'is_anonymized_discover_',
     'is_amp_top_stories',
     'is_amp_blue_link'
     'is_job_listing',
@@ -39,6 +41,9 @@ DIMENSIONS_URL = [
     'is_learning_videos',
 ]
 
+#this is not from the API but we'll use it to group data by period
+PERIODS = ['D','W','M','Q','Y','QE']
+
 #function to calculate GBQ query cost before actually running it 
 def calculate_gbq_cost(query, client):
     # Create a QueryJobConfig object and enable dry_run
@@ -48,8 +53,7 @@ def calculate_gbq_cost(query, client):
     # Calculate the cost assuming the price is $5 per TB (as of the last update, check the pricing page)
     # Note: Prices can vary by region and over time.
     estimated_cost = (dry_run_query_job.total_bytes_processed / (1024**4)) * 5
-    return estimated_cost
-
+    return round(estimated_cost,4)
 
 class Query_BQ:
     def __init__(self, credentials, dataset):
@@ -58,6 +62,8 @@ class Query_BQ:
         #we need to define them to have a better filtering of our data 
         self.dates = {} 
         self.filters = ''
+        #list of dimensions to define the best table to use to optimize costs 
+        self.filters_dimensions = []
         #to connect easily to BQ 
         pandas_gbq.context.credentials = self.credentials
         pandas_gbq.context.project = self.dataset.split('.')[0]
@@ -114,9 +120,11 @@ class Query_BQ:
         if operator not in OPERATORS:
             raise ValueError('Operator not valid. Check https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.filters.operator for the accepted values.')
         
+        #check that the dimension is valid 
         if dimension not in DIMENSIONS_SITE and dimension not in DIMENSIONS_URL:
             raise ValueError(f'Dimension not valid: {dimension}')
         
+        #create the SQL code based on the condition 
         if operator in ['equals','notEquals']:
             self.filters += f" AND {dimension} {OPERATORS_BQ[OPERATORS.index(operator)]} '{expression}'"
         if operator in ['contains','notContains']:
@@ -124,36 +132,46 @@ class Query_BQ:
         if operator in ['includingRegex','excludingRegex']:
             self.filters += f" AND {OPERATORS_BQ[OPERATORS.index(operator)]}({dimension}, '{expression}')"
         
+        #append the dimension to the dimension list 
+        self.filters_dimensions.append(dimension)
         return self 
             
     def get(self):
         #check that dates are not empty
         if 'startDate' not in self.dates.keys() or 'endDate' not in self.dates.keys():
             raise ValueError('You must define a date range')
-        return Report_BQ(self.credentials, self.dataset, self.dates, self.filters)
+        return Report_BQ(self.credentials, self.dataset, self.dates, self.filters, self.filters_dimensions)
     
 
 
 class Report_BQ:
-    def __init__(self, credentials, dataset, dates, filters):
+    def __init__(self, credentials, dataset, dates, filters, filters_dimensions):
         self.credentials = credentials
         self.client = bigquery.Client(credentials=credentials, project=credentials.project_id)
         self.dataset = dataset
         self.dates = dates
         self.filters = filters
+        self.filters_dimensions = filters_dimensions
         self.estimate_cost = True
         #to connect easily to BQ 
         pandas_gbq.context.credentials = self.credentials
         pandas_gbq.context.project = self.dataset.split('.')[0]
+        #we define the best table to use based on the filters dimensions 
+        #in some cases, we'll force the table anyway because we'd need specific dimensions in the report
+        self.define_table_to_use()
     
+    def define_table_to_use(self):
+        #check if all the dimensions are in the list of dimensions for the site table 
+        if all([dimension in DIMENSIONS_SITE for dimension in self.filters_dimensions]):
+            self.table_to_use = 'searchdata_site_impression'
+        #else we use the URL table
+        else:
+            self.table_to_use = 'searchdata_url_impression'
     
     def define_estimate_cost(self, value=True):
         if not value: 
             self.estimate_cost = False
         return self 
-    
-    def custom_query(self, sql):
-        return pandas_gbq.read_gbq(sql)
     
     def ctr_yield_curve(self):
         sql = (
@@ -190,13 +208,18 @@ class Report_BQ:
             return pandas_gbq.read_gbq(sql)
     
     def group_data_by_period(self, period):
+        
+        #check tha the period is valid
+        if period not in PERIODS:
+            raise ValueError('Period not valid. You can only use D, W, M, Q, QE or Y.')
+        
         sql = f"""
             WITH raw_data AS (
                 SELECT  
                 data_date, 
                 SUM(clicks) as clicks, 
                 SUM(impressions) as impressions,
-                FROM `{self.dataset}.searchdata_url_impression` 
+                FROM `{self.dataset}.{self.table_to_use}` 
                 WHERE 
                 data_date BETWEEN "{self.dates['startDate']}" and "{self.dates['endDate']}" 
                 {self.filters}
@@ -383,7 +406,7 @@ class Report_BQ:
             SELECT 
             data_date as ds, 
             SUM(clicks) as y
-            FROM `{self.dataset}.searchdata_url_impression`
+            FROM `{self.dataset}.{self.table_to_use}`
             WHERE 
             data_date BETWEEN "{self.dates['startDate']}" and "{self.dates['endDate']}"
             {self.filters}
@@ -495,7 +518,7 @@ class Report_BQ:
             SELECT 
             data_date as date, 
             SUM(clicks) as clicks
-            FROM `{self.dataset}.searchdata_url_impression`
+            FROM `{self.dataset}.{self.table_to_use}`
             WHERE 
             data_date BETWEEN "{self.dates['startDate']}" and "{self.dates['endDate']}"
             {self.filters}
@@ -849,7 +872,7 @@ class Report_BQ:
                 select 
                 SUM({metric}) as {metric}, 
                 {','.join(dimensions)}
-                FROM `{self.dataset}.searchdata_url_impression` 
+                FROM `{self.dataset}.{self.table_to_use}` 
                 WHERE 
                 data_date BETWEEN "{self.dates['startDate']}" and "{self.dates['endDate']}"
                 {self.filters}
@@ -946,7 +969,7 @@ class Report_BQ:
             SUM(clicks) AS clicks, 
             SUM(impressions) AS impressions, 
             FORMAT_DATE('%A', data_date) AS date
-            FROM `{self.dataset}.searchdata_url_impression`
+            FROM `{self.dataset}.{self.table_to_use}`
             WHERE 
             data_date BETWEEN "{self.dates['startDate']}" and "{self.dates['endDate']}"
             {self.filters}

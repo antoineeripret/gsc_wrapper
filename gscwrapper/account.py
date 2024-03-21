@@ -19,10 +19,6 @@ class Account_BQ:
             for table in tables:
                 tables_df.loc[len(tables_df)] = [getattr(table, element) for element in tables_df.columns]
         return tables_df.table_id.tolist()
-    
-    
-    
-        
 
 class Account:
     """

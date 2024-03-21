@@ -52,14 +52,16 @@ report = (
 OPERATORS = ['equals','notEquals','contains','notContains','includingRegex','excludingRegex']
 ```
 
-**IMPORTANT**: please note that the `page` dimension in the API is called `url` in BigQuery !! 
+**IMPORTANT**: 
+- please note that the `page` dimension in the API is called `url` in BigQuery !! 
+- Although doable in SQL, I decided to keep behavior similar between the API and BQ, hence filters are merged with AND because the API doesn't allow OR. 
 
 ```python 
 report = (
     conn
     .query
     .range(start="2023-01-01", stop="2023-02-01")
-    .filter("page", "blog", "contains")
+    .filter("url", "blog", "contains")
     .get()
 )
 ```
