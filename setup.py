@@ -7,7 +7,7 @@ setup(
     install_requires=[
           'google-api-python-client>=1.7.3',
           'python-dateutil>=2.7.3',
-          'google-auth>=1.5.0,<2dev',
+          'google-auth>=2.13.0',
           'google-auth-oauthlib>=0.2.0',
           'google.cloud==0.34.0',
           'pandas==2.2.0', 
