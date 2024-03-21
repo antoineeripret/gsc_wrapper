@@ -12,7 +12,7 @@ setup(
           'google.cloud==0.34.0',
           'pandas==2.2.0', 
           'pandas_gbq==0.22.0',
-          'validators==0.7.1',
+          'validators==0.23.2',
           'tqdm==4.66.1', 
           'prophet==1.1.5',
           'pycausalimpact==0.1.1', 
