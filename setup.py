@@ -19,6 +19,7 @@ setup(
           'numpy==1.26.3', 
           'requests==2.31.0'
       ],
+
     # Additional metadata about your package.
     author='Antoine Eripret',
     author_email='antoine.eripret.dev@gmail.com',
