@@ -1,4 +1,24 @@
-from . import query, sitemap, inspect_url
+from . import query, query_bq, sitemap, inspect_url
+from google.cloud import bigquery
+import pandas as pd 
+
+class Account_BQ:
+    def __init__(self, credentials, dataset):
+        self.credentials = credentials
+        self.dataset = dataset
+        self.client = bigquery.Client(credentials=credentials, project=credentials.project_id)
+        self.tables = self.list_tables()
+        self.query = query_bq.Query_BQ(self.credentials, self.dataset)
+    
+    def list_tables(self):
+        #list tables in a dataset
+        tables = list(self.client.list_tables(self.dataset))
+        #get the information in a friendly way 
+        if len(tables) > 0:
+            tables_df = pd.DataFrame(columns=[attr for attr in dir(tables[0]) if not callable(getattr(tables[0], attr)) and not attr.startswith("_")])
+            for table in tables:
+                tables_df.loc[len(tables_df)] = [getattr(table, element) for element in tables_df.columns]
+        return tables_df.table_id.tolist()
 
 class Account:
     """

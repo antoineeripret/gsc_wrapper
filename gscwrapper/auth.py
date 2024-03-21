@@ -12,7 +12,7 @@ http://google-auth-oauthlib.readthedocs.io/en/latest/reference/google_auth_oauth
 
 import collections.abc
 import json
-from .account import Account
+from .account import Account, Account_BQ
 
 # Define Oath scopes with read only access
 OAUTH_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly"
@@ -27,7 +27,25 @@ def generate_auth(
     credentials=None, 
     serialize=None, 
     flow="web", 
-    service_account_auth=False):
+    service_account_auth=False, 
+    bigquery=False, 
+    bigquery_dataset=None
+    ):
+    
+    if bigquery:
+        if not bigquery_dataset:
+            raise ValueError('You must provide a dataset name.')
+        if len(bigquery_dataset.split('.')) != 2:
+            raise ValueError('Dataset name must be in the format project_id.dataset_name')
+        credentials = (
+            service_account
+            .Credentials
+            .from_service_account_file(
+                filename=client_config,
+            )
+        )
+        
+        return Account_BQ(credentials, bigquery_dataset)
     
     if service_account_auth:
         credentials = (

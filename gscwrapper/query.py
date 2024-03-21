@@ -12,7 +12,7 @@ SEARCH_TYPES = ['web', 'image', 'video', 'discover','googleNews','news']
 DATA_STATES = ['all','final']
 
 #this is not from the API but we'll use it to group data by period
-PERIODS = ['D','W','M','Q','Y']
+PERIODS = ['D','W','M','Q','Y','QE']
 
 class Query:
     """
@@ -174,6 +174,11 @@ class Query:
         
         #we flatten the list of lists we have 
         flattened = pd.DataFrame([item for row in report for item in row])
+        #we check if we have no data 
+        #raise an error instead of returning an empty dataframe to ensure the user is aware of the issue
+        #linked to https://github.com/antoineeripret/gsc_wrapper/issues/9
+        if len(flattened) == 0:
+            raise ValueError('No data available. Check your request and ensure you\'re using the right dates and filters.')
 
         #we create a dataframe from the keys we received from the API 
         #this is the only way to get the data in a proper format 
@@ -194,6 +199,9 @@ class Query:
         
         if limit != float('inf'):
             df = df.head(limit)
+        
+        #reset filter to prevent issue raised here https://github.com/antoineeripret/gsc_wrapper/issues/9 
+        self.raw.pop('dimensionFilterGroups',None)
         
         return Report(df, self.webproperty, self.raw['startDate'], self.raw['endDate'])
 
@@ -280,7 +288,7 @@ class Report:
         
         #check tha the period is valid
         if period not in PERIODS:
-            raise ValueError('Period not valid. You can only use D, W, M, Q or Y.')
+            raise ValueError('Period not valid. You can only use D, W, M, Q, QE or Y.')
         
         return (
             self
@@ -877,7 +885,7 @@ class Report:
             return (
                 self
                 .df
-                .query('page.isin(@urls.loc)==False')
+                .query('page.isin(@urls["loc"])==False')
             )
     
     #function to find winners and losers between two period 

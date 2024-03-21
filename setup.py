@@ -2,14 +2,17 @@ from setuptools import setup, find_packages
 
 setup(
     name='gscwrapper',
-    version='0.0.4',
+    version='0.0.5',
     packages=find_packages(),
     install_requires=[
           'google-api-python-client>=1.7.3',
           'python-dateutil>=2.7.3',
           'google-auth>=1.5.0,<2dev',
           'google-auth-oauthlib>=0.2.0',
+          'google.cloud==0.34.0',
           'pandas==2.2.0', 
+          'pandas_gbq==0.22.0',
+          'validators==0.7.1',
           'tqdm==4.66.1', 
           'prophet==1.1.5',
           'pycausalimpact==0.1.1', 
