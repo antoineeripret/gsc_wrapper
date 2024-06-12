@@ -229,6 +229,10 @@ class Report:
         if 'date' in self.dimensions:
             self.from_date = df.date.min()
             self.to_date = df.date.max()
+        else: 
+            self.from_date = None
+            self.to_date = None
+            
         self.df = df
     
     @classmethod
