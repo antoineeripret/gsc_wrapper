@@ -992,3 +992,267 @@ class Report_BQ:
         else:
             df = pandas_gbq.read_gbq(sql)
             return df 
+    
+    
+    #inspired by https://www.searchenginejournal.com/big-query-and-gsc-data-content-performance-analysis/508481/ 
+    #funtion to get the unique query count per page
+    def uqc(self):
+        
+        sql = f""" 
+        
+        SELECT 
+            url, 
+            COUNT(DISTINCT(query)) as uqc
+            FROM `{self.dataset}.searchdata_url_impression`
+            WHERE 
+            data_date BETWEEN "{self.dates['startDate']}" and "{self.dates['endDate']}"
+            {self.filters}
+            and query is not null
+            GROUP BY 
+            url
+            ORDER BY
+            uqc DESC
+        """
+        
+        if self.estimate_cost:
+            return calculate_gbq_cost(sql, self.client)
+        else:
+            df = pandas_gbq.read_gbq(sql)
+            return df 
+    
+    
+    #function to find potential contents to update
+    #we use the content decay approach here 
+    def find_content_decay(
+        self, threshold_decay=0.25,
+        metric='clicks',
+        threshold_metric=100, 
+        type='url', 
+        period='week'
+        ):
+        
+        #threshold must be a float between 0.01 and 1
+        if not isinstance(threshold_decay, float):
+            raise ValueError('Threshold must be a float.')
+        if threshold_decay < 0.01 or threshold_decay > 1:
+            raise ValueError('Threshold must be between 0.01 and 1.')
+        
+        #threadhold for clicks must be a positive integer 
+        if not isinstance(threshold_metric, int):
+            raise ValueError('Threshold must be an integer.')
+        if threshold_metric < 0:
+            raise ValueError('Threshold must be a positive integer.')
+        
+        #period must be either week or month 
+        if period not in ['week','month']:
+            raise ValueError('Period must be either week or month')
+        
+        #type must be either page or query 
+        if type not in ['url','query']:
+            raise ValueError('Type must be either url or query')
+        
+        if period == 'week': 
+            
+            sql = f""" 
+            
+            WITH raw_data AS(
+                SELECT 
+                {type}, 
+                DATE(data_date) as date,
+                SUM({metric}) as metric
+                FROM `{self.dataset}.searchdata_url_impression` 
+                WHERE 
+                data_date BETWEEN "{self.dates['startDate']}" and "{self.dates['endDate']}"
+                {self.filters}
+                group by {type}, data_date
+                ),
+            min_max_date AS (
+                SELECT 
+                max(date) as max_date, 
+                min(date) as min_date  
+                from raw_data
+                ), 
+            last_sunday AS (
+                SELECT 
+                CASE 
+                    WHEN EXTRACT(DAYOFWEEK FROM min_max_date.max_date) = 1 THEN min_max_date.max_date
+                    ELSE DATE_TRUNC(min_max_date.max_date, WEEK(SUNDAY))
+                    END AS last_sunday, 
+                from min_max_date
+                ), 
+            max_dates AS (
+                SELECT 
+                last_sunday.last_sunday, 
+                DATE_TRUNC(last_sunday.last_sunday, WEEK(MONDAY)) as last_monday
+                from last_sunday
+                ), 
+            first_monday AS (
+                SELECT 
+                DATE_ADD(
+                    min_max_date.min_date,
+                    INTERVAL 
+                    CASE
+                        WHEN EXTRACT(DAYOFWEEK FROM min_max_date.min_date) = 1 THEN 1 
+                        WHEN EXTRACT(DAYOFWEEK FROM min_max_date.min_date) = 2 THEN 7
+                        WHEN EXTRACT(DAYOFWEEK FROM min_max_date.min_date) = 3 THEN 6 
+                        WHEN EXTRACT(DAYOFWEEK FROM min_max_date.min_date) = 4 THEN 5 
+                        WHEN EXTRACT(DAYOFWEEK FROM min_max_date.min_date) = 5 THEN 4
+                        WHEN EXTRACT(DAYOFWEEK FROM min_max_date.min_date) = 6 THEN 3 
+                        WHEN EXTRACT(DAYOFWEEK FROM min_max_date.min_date) = 7 THEN 2 
+                    END DAY
+                ) AS first_monday
+                FROM min_max_date
+                ), 
+            min_dates AS (
+                SELECT 
+                first_monday.first_monday, 
+                DATE_ADD(first_monday.first_monday, INTERVAL 6 DAY) as first_sunday
+                from first_monday
+                ), 
+            raw_data_within_period AS (
+                SELECT 
+                {type}, 
+                CASE 
+                    WHEN EXTRACT(ISOWEEK from date) >= 10 THEN CONCAT(EXTRACT(YEAR from date),"-",EXTRACT(ISOWEEK from date))
+                    ELSE CONCAT(EXTRACT(YEAR from date),"-0",EXTRACT(ISOWEEK from date))
+                    END as date_period, 
+                SUM(metric) as metric
+                from raw_data 
+                where date BETWEEN (select first_monday from min_dates) and (select last_sunday from max_dates)
+                group by url, date_period
+                ), 
+            data_rank AS (
+                SELECT 
+                {type}, 
+                date_period, 
+                metric, 
+                RANK () OVER (PARTITION BY {type} order by metric desc) as rank
+                from raw_data_within_period
+                ), 
+            data_current AS (
+                SELECT 
+                {type}, 
+                date_period, 
+                metric, 
+                from raw_data_within_period 
+                where date_period = (select max(date_period) from raw_data_within_period)
+                ), 
+            final_data AS (
+                select 
+                data_current.{type}, 
+                data_current.metric as metric_last_period, 
+                data_rank.metric as metric_max, 
+                data_rank.date_period as period_max, 
+                IF(data_current.metric = 0, 100, round(1-data_current.metric/data_rank.metric,3)) as decay,
+                (data_rank.metric-data_current.metric) as decay_abs
+                from data_current
+                left join data_rank on data_rank.{type} = data_current.{type}
+                where data_rank.rank = 1 
+                order by decay_abs desc
+            )
+            
+            select 
+            * 
+            from final_data 
+            where 
+            decay_abs >= {threshold_metric}
+            and 
+            decay >= {threshold_decay}
+            
+            """
+        
+        if period == 'month':
+            
+            sql = f""" 
+            
+            WITH raw_data AS(
+                SELECT 
+                {type}, 
+                DATE(data_date) as date,
+                SUM({metric}) as metric
+                FROM `{self.dataset}.searchdata_url_impression` 
+                WHERE 
+                data_date BETWEEN "{self.dates['startDate']}" and "{self.dates['endDate']}"
+                {self.filters}
+                group by {type}, data_date
+                ),
+            min_max_date AS (
+                SELECT 
+                max(date) as max_date, 
+                min(date) as min_date  
+                from raw_data
+                ), 
+            max_dates AS (
+                SELECT 
+                CASE 
+                    WHEN last_day(max_date) = max_date then max_date 
+                    ELSE DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 1 DAY)
+                END as last_day, 
+                from min_max_date
+                ), 
+            min_dates AS (
+                SELECT 
+                CASE 
+                    WHEN DATE_TRUNC(min_date, MONTH) = min_date then min_date 
+                    ELSE DATE_TRUNC(DATE_ADD(min_date, INTERVAL 1 MONTH), MONTH)
+                END As first_day, 
+                from min_max_date
+                ),
+            raw_data_within_period AS (
+                SELECT 
+                {type}, 
+                CASE 
+                    WHEN EXTRACT(MONTH from date) >= 10 THEN CONCAT(EXTRACT(YEAR from date),"-",EXTRACT(MONTH from date))
+                    ELSE CONCAT(EXTRACT(YEAR from date),"-0",EXTRACT(MONTH from date))
+                    END as date_period, 
+                SUM(metric) as metric
+                from raw_data 
+                where date BETWEEN (select first_day from min_dates) and (select last_day from max_dates)
+                group by {type}, date_period
+                ), 
+            data_rank AS (
+                SELECT 
+                {type}, 
+                date_period, 
+                metric, 
+                RANK () OVER (PARTITION BY {type} order by metric desc) as rank
+                from raw_data_within_period
+                ), 
+            data_current AS (
+                SELECT 
+                {type}, 
+                date_period, 
+                metric, 
+                from raw_data_within_period 
+                where date_period = (select max(date_period) from raw_data_within_period)
+                ), 
+            final_data AS (
+                select 
+                data_current.{type}, 
+                data_current.metric as metric_last_period, 
+                data_rank.metric as metric_max, 
+                data_rank.date_period as period_max, 
+                IF(data_current.metric = 0, 100, round(1-data_current.metric/data_rank.metric,3)) as decay,
+                (data_rank.metric-data_current.metric) as decay_abs
+                from data_current
+                left join data_rank on data_rank.{type} = data_current.{type}
+                where data_rank.rank = 1 
+                order by decay_abs 
+                )
+
+            select 
+            * 
+            from final_data 
+            where 
+            decay_abs >= {threshold_metric}
+            and 
+            decay >= {threshold_decay}
+            
+            """
+        
+        
+        if self.estimate_cost:
+            return calculate_gbq_cost(sql, self.client)
+        else:
+            df = pandas_gbq.read_gbq(sql)
+            return df 

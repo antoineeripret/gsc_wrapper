@@ -56,6 +56,10 @@ class Query:
             'startDate': start,
             'endDate': stop, 
         })
+        
+        self.start_date = start
+        self.stop_date = stop
+        
         return self
     
     #list of dimensions 
@@ -201,9 +205,13 @@ class Query:
             df = df.head(limit)
         
         #reset filter to prevent issue raised here https://github.com/antoineeripret/gsc_wrapper/issues/9 
-        self.raw.pop('dimensionFilterGroups',None)
+        self.raw = {
+            'startRow': 0,
+            'rowLimit': 25000
+        }
+        self.meta = {}
         
-        return Report(df, self.webproperty, self.raw['startDate'], self.raw['endDate'])
+        return Report(df, self.webproperty)
 
 
 class Report:
@@ -213,14 +221,19 @@ class Report:
     
     """
     
-    def __init__(self, df, webproperty, from_date, to_date):
+    def __init__(self, df, webproperty):
         
         self.webproperty = webproperty
         self.dimensions = [column for column in df.columns if column in DIMENSIONS]
         self.metrics = [column for column in df.columns if column not in DIMENSIONS]
-        self.from_date = from_date
-        self.to_date = to_date
+        if 'date' in self.dimensions:
+            self.from_date = df.date.min()
+            self.to_date = df.date.max()
         self.df = df
+    
+    @classmethod
+    def from_dataframe(cls, df, webproperty):
+        return cls(df, webproperty)
         
     def __repr__(self):
         return """
@@ -568,7 +581,7 @@ class Report:
         
         #interverntion date must be defined
         if not intervention_date:
-            raise ValueError("Intervention_date must be dfined")
+            raise ValueError("Intervention_date must be defined")
         
         #date must be a dimensions 
         if 'date' not in self.dimensions:
@@ -768,7 +781,7 @@ class Report:
         ):
         #check that we have the page and date dimensions 
         if not all(elem in self.dimensions for elem in [type,'date']):
-            raise ValueError('Your report needs a page and a date dimension to call this method.')
+            raise ValueError(f'Your report needs a {type} and a date dimension to call this method.')
         
         #check that we have the clicks metrics 
         if metric not in self.metrics:
@@ -861,7 +874,7 @@ class Report:
             #keep only the last month
             .query('date_period == @end_date.strftime(@date_format)')
             .assign(
-                decay = lambda df_: 1 - df_['metric_last_period'] / df_['metric_max'], 
+                decay = lambda df_: round(1 - df_['metric_last_period'] / df_['metric_max'],3), 
                 decay_abs = lambda df_: df_['metric_max'] - df_['metric_last_period']
             )
             .drop('date_period', axis = 1)
@@ -924,26 +937,26 @@ class Report:
             raise ValueError('Periods must not overlap.')
         
         #check that the data we provide in df is within the two periods 
-        if pd.to_datetime(self.df['date']).min() < datetime.strptime(period_from[0], "%Y-%m-%d"):
+        if pd.to_datetime(self.df['date']).min() > datetime.strptime(period_from[0], "%Y-%m-%d"):
             raise ValueError('The data in your report is not within the period from.')
-        if pd.to_datetime(self.df['date']).max() > datetime.strptime(period_to[1], "%Y-%m-%d"):
+        if pd.to_datetime(self.df['date']).max() < datetime.strptime(period_to[1], "%Y-%m-%d"):
             raise ValueError('The data in your report is not within the period to.')
         
         #we create two dataframes with the data for each period
         df_from = (
             self
             .df
-            .groupby(['page','date'], as_index=False)
-            .agg({'clicks': 'sum'})
             .query('@period_from[0] <= date <= @period_from[1]')
+            .groupby(['page'], as_index=False)
+            .agg({'clicks': 'sum'})
         )
         
         df_to = (
             self
             .df
-            .groupby(['page','date'], as_index=False)
-            .agg({'clicks': 'sum'})
             .query('@period_to[0] <= date <= @period_to[1]')
+            .groupby(['page'], as_index=False)
+            .agg({'clicks': 'sum'})
         )
         
         return (
@@ -958,7 +971,7 @@ class Report:
             #we assign a value based on either it is a winner or a loser 
             .assign(
                 diff = lambda df_:df_.clicks_after - df_.clicks_before, 
-                winner = lambda df_:df_.diff > 0, 
+                winner = lambda df_:df_['diff'] > 0, 
             )
         )
         
@@ -1154,4 +1167,137 @@ class Report:
                 #freduce funtion to apply the replace_element function to the query column
                 query_replaced = reduce(replace_element, list_to_replace, self.df['query'])
             )
+        )
+    
+    #inspired by https://www.searchenginejournal.com/big-query-and-gsc-data-content-performance-analysis/508481/ 
+    #funtion to get the unique query count per page
+    def uqc(self):
+        #check that we have the query dimension
+        if 'query' not in self.dimensions:
+            raise ValueError('Your report needs a query dimension to call this method.')
+        
+        if 'page' not in self.dimensions:
+            raise ValueError('Your report needs a page dimension to call this method.')
+        
+        return (
+            self
+            .df
+            .groupby('page', as_index=False)
+            .agg({'query': 'nunique'})
+            .rename(columns={'query': 'uqc'})
+            .sort_values('uqc', ascending=False)
+        )
+    
+    #method used to classify pages based on a DataFrame with rules 
+    def classify_pages(self, rules):
+        #check that we have the page dimension
+        if 'page' not in self.dimensions:
+            raise ValueError('Your report needs a page dimension to call this method.')
+        
+        #check that the rules are a pandas DataFrame
+        if not isinstance(rules, pd.DataFrame):
+            raise ValueError('Rules must be a pandas DataFrame.')
+        
+        #check that we have the page and the classification columns in the rules
+        if not all(elem in rules.columns for elem in ['category','rule','type']):
+            raise ValueError('Rules must have a page and a classification column.')
+        
+        #rules types must be within the same types supported by the filter() call 
+        if not all(elem in ['equals','contains','includingRegex'] for elem in rules.type.unique()):
+            raise ValueError('Check that the rules types are within the following list: equals, contains, includingRegex')
+        
+        
+        
+        #create all the caselist for Pandas 
+        caselist=[]
+        #loop the rules to create the caselist
+        #that we will use to update the self.df object 
+        for index, row in rules.iterrows():
+            if row['type'] == 'equals':
+                caselist.append((self.df['page']==row['rule'], row['category']))
+            elif row['type'] == 'contains':
+                caselist.append((self.df['page'].str.contains(row['rule'], regex=False), row['category']))
+            elif row['type'] == 'includingRegex':
+                caselist.append((self.df['page'].str.contains(row['rule'], regex=True), row['category']))
+        
+        #last rule to ensure we always have a category
+        caselist.append((self.df['page'].str.contains("http"), 'Other'))
+                
+        #based on these rules, we update the self.df object 
+        self.df = (
+            self
+            .df
+            .assign(
+                category = lambda df_:df_
+                .page
+                .case_when(
+                    caselist = caselist
+                )
+            )
+        )
+        
+        return self
+
+
+    def ab_testing(self, metric='clicks', control_group=None, treatment_group=None, start_date=None):
+        
+        #check that we have the page dimension
+        if 'page' not in self.dimensions:
+            raise ValueError('Your report needs a page dimension to call this method.')
+        
+        #check that we have the date dimension
+        if 'date' not in self.dimensions:
+            raise ValueError('Your report needs a date dimension to call this method.')
+        
+        #check that we have the metric in our metrics
+        if metric not in self.metrics:
+            raise ValueError('Your report needs the metric you want to use to call this method.')
+        
+        #check that the start date is a parsable date
+        if not utils.are_dates_parsable([start_date]):
+            raise ValueError('The start date must be a parsable date using the YYYY-MM-DD format.')
+        
+        #check that the date is before the max date of our dataset 
+        if time.strptime(start_date, "%Y-%m-%d") >= time.strptime(self.df['date'].max(), "%Y-%m-%d"):
+            raise ValueError('The start date must be before the max date of your dataset.')
+        
+        #check that both control and treatment groups are lists of pd.Series 
+        if not isinstance(control_group, pd.Series) or not isinstance(treatment_group, list):
+            raise ValueError('Control group must be a pandas Series or a list.')
+        if not isinstance(treatment_group, pd.Series) or not isinstance(treatment_group, list):
+            raise ValueError('Treatment group must be a pandas Series or a list.')
+        
+        #check that the control and treatmente groups have at least one element
+        if len(control_group) == 0:
+            raise ValueError('Control group must have at least one element.')
+        if len(treatment_group) == 0:
+            raise ValueError('Treatment group must have at least one element.')
+        
+        #check that the total clicks / impressions for both groups is close 
+        #we hard code a tolerance of 25% before the start date 
+        if (
+            abs(self.df.query('date < @start_date & page in @control_group')[metric].sum() - self.df.query('date < @start_date & page in @treatment_group')[metric].sum()) / self.df.query('date < @start_date')[metric].sum() > 0.25
+        ):
+            raise ValueError('The total clicks / impressions for both groups before the start date mut be close (25% tolerance).')
+        
+        
+        return (
+            self
+            .df
+            #we clasify the pages based on the control and treatment groups
+            .assign(
+                group = lambda df_:df_['page']
+                .case_when(
+                    caselist = [
+                        (df_['page'].isin(control_group), 'Control'),
+                        (df_['page'].isin(treatment_group), 'Treatment')
+                    ]
+                )
+            )
+            #we remove the pages that are not in the control or treatment group
+            .query('group in ["Control","Treatment"]')
+            #we group the data by date and group
+            .groupby(['date','group'], as_index=False)
+            .agg({metric: 'sum'})
+            .sort_values('date', ascending=True)
         )
