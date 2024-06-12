@@ -1,6 +1,7 @@
 from . import utils
 import time 
 import pandas as pd 
+from copy import deepcopy
 
 #variables we'll use in this code 
 #added here to follow DRY principle
@@ -258,6 +259,66 @@ class Report:
     
     def show_data(self):
         return self.df
+    
+    #function to filter data 
+    def filter(self, query):
+        self_copy = deepcopy(self)
+        self_copy.df = self_copy.df.query(query)
+        return deepcopy(self_copy) 
+    
+    #inspired by https://github.com/eliasdabbas/advertools
+    def url_to_df(self):
+        if 'page' not in self.dimensions:
+            raise ValueError('Your report needs a page dimension to call this method.')
+        
+        #get the folders 
+        folders = ( 
+            self
+            .df
+            .page 
+                .str.split("/", expand=True)
+                #just from 3 to N 
+                .iloc[:,3:]
+                #rename columns by adding folder_ before the current name 
+                .rename(columns=lambda x: 'folder_'+str(x-2))
+            )
+        
+        #append folders to self.df horizontally 
+        self.df = (
+            pd
+            .concat(
+                [
+                    #generic info 
+                    self
+                    .df
+                    .assign(
+                        #get the scheme 
+                        scheme = lambda df_:df_['page'].apply(lambda x: x.split('://')[0]),
+                        #get the netloc 
+                        netloc = lambda df_:df_['page'].apply(lambda x: x.split('://')[1].split('/')[0]),
+                        #get the path 
+                        path = lambda df_:df_['page'].apply(lambda x: '/'+'/'.join(x.split('/')[3:])),
+                        #get the last folder 
+                        last_folder = lambda df_:df_['page'].apply(lambda x: x.split('/')[-1]),
+                        #get the query parameters
+                        query = lambda df_:df_['page'].apply(lambda x: x.split('?')[1] if '?' in x else None),
+                        #get the URL fragment 
+                        fragment = lambda df_:df_['page'].apply(lambda x: x.split('#')[1] if '#' in x else None),
+                    ), 
+                    #folders
+                    self
+                    .df
+                    .page 
+                        .str.split("/", expand=True)
+                        #just from 3 to N 
+                        .iloc[:,3:]
+                        #rename columns by adding folder_ before the current name 
+                        .rename(columns=lambda x: 'folder_'+str(x-2))
+                ]
+            , axis=1)
+        )
+        return self 
+    
         
     # method to create a CTR yield curve 
     # concept explained here : https://www.aeripret.com/ctr-yield-curve/
@@ -637,10 +698,11 @@ class Report:
         if 'page' not in self.dimensions:
             raise ValueError('Your report needs a page dimension to call this method.')
         
+        self_copy = deepcopy(self)
         #we update the variables in the object itself 
-        self.df = (
+        self_copy.df = (
             #we marge our initial response from the GSC API 
-            self
+            self_copy
             .df
             .merge(
                 #with our redirect mapping 
@@ -660,7 +722,7 @@ class Report:
             )
         )
         
-        return self 
+        return self_copy
     
     #extract search volume from dataforSEO 
     def extract_search_volume(self, location_code, client_email, client_password, calculate_cost = True):
@@ -1228,8 +1290,9 @@ class Report:
         caselist.append((self.df['page'].str.contains("http"), 'Other'))
                 
         #based on these rules, we update the self.df object 
-        self.df = (
-            self
+        self_copy = deepcopy(self)
+        self_copy.df = (
+            self_copy
             .df
             .assign(
                 category = lambda df_:df_
@@ -1240,68 +1303,4 @@ class Report:
             )
         )
         
-        return self
-
-
-    def ab_testing(self, metric='clicks', control_group=None, treatment_group=None, start_date=None):
-        
-        #check that we have the page dimension
-        if 'page' not in self.dimensions:
-            raise ValueError('Your report needs a page dimension to call this method.')
-        
-        #check that we have the date dimension
-        if 'date' not in self.dimensions:
-            raise ValueError('Your report needs a date dimension to call this method.')
-        
-        #check that we have the metric in our metrics
-        if metric not in self.metrics:
-            raise ValueError('Your report needs the metric you want to use to call this method.')
-        
-        #check that the start date is a parsable date
-        if not utils.are_dates_parsable([start_date]):
-            raise ValueError('The start date must be a parsable date using the YYYY-MM-DD format.')
-        
-        #check that the date is before the max date of our dataset 
-        if time.strptime(start_date, "%Y-%m-%d") >= time.strptime(self.df['date'].max(), "%Y-%m-%d"):
-            raise ValueError('The start date must be before the max date of your dataset.')
-        
-        #check that both control and treatment groups are lists of pd.Series 
-        if not isinstance(control_group, pd.Series) or not isinstance(treatment_group, list):
-            raise ValueError('Control group must be a pandas Series or a list.')
-        if not isinstance(treatment_group, pd.Series) or not isinstance(treatment_group, list):
-            raise ValueError('Treatment group must be a pandas Series or a list.')
-        
-        #check that the control and treatmente groups have at least one element
-        if len(control_group) == 0:
-            raise ValueError('Control group must have at least one element.')
-        if len(treatment_group) == 0:
-            raise ValueError('Treatment group must have at least one element.')
-        
-        #check that the total clicks / impressions for both groups is close 
-        #we hard code a tolerance of 25% before the start date 
-        if (
-            abs(self.df.query('date < @start_date & page in @control_group')[metric].sum() - self.df.query('date < @start_date & page in @treatment_group')[metric].sum()) / self.df.query('date < @start_date')[metric].sum() > 0.25
-        ):
-            raise ValueError('The total clicks / impressions for both groups before the start date mut be close (25% tolerance).')
-        
-        
-        return (
-            self
-            .df
-            #we clasify the pages based on the control and treatment groups
-            .assign(
-                group = lambda df_:df_['page']
-                .case_when(
-                    caselist = [
-                        (df_['page'].isin(control_group), 'Control'),
-                        (df_['page'].isin(treatment_group), 'Treatment')
-                    ]
-                )
-            )
-            #we remove the pages that are not in the control or treatment group
-            .query('group in ["Control","Treatment"]')
-            #we group the data by date and group
-            .groupby(['date','group'], as_index=False)
-            .agg({metric: 'sum'})
-            .sort_values('date', ascending=True)
-        )
+        return self_copy
