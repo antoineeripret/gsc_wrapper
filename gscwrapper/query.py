@@ -13,7 +13,7 @@ SEARCH_TYPES = ['web', 'image', 'video', 'discover','googleNews','news']
 DATA_STATES = ['all','final']
 
 #this is not from the API but we'll use it to group data by period
-PERIODS = ['D','W','M','Q','Y','QE']
+PERIODS = ['D','W','M','Q','Y','QE','ME']
 
 class Query:
     """
@@ -299,11 +299,7 @@ class Report:
                         #get the path 
                         path = lambda df_:df_['page'].apply(lambda x: '/'+'/'.join(x.split('/')[3:])),
                         #get the last folder 
-                        last_folder = lambda df_:df_['page'].apply(lambda x: x.split('/')[-1]),
-                        #get the query parameters
-                        query = lambda df_:df_['page'].apply(lambda x: x.split('?')[1] if '?' in x else None),
-                        #get the URL fragment 
-                        fragment = lambda df_:df_['page'].apply(lambda x: x.split('#')[1] if '#' in x else None),
+                        last_folder = lambda df_:df_['page'].apply(lambda x: x.split('/')[-1])
                     ), 
                     #folders
                     self

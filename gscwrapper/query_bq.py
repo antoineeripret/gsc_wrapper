@@ -42,7 +42,7 @@ DIMENSIONS_URL = [
 ]
 
 #this is not from the API but we'll use it to group data by period
-PERIODS = ['D','W','M','Q','Y','QE']
+PERIODS = ['D','W','M','Q','Y','QE','ME']
 
 #function to calculate GBQ query cost before actually running it 
 def calculate_gbq_cost(query, client):
