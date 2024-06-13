@@ -270,19 +270,7 @@ class Report:
     def url_to_df(self):
         if 'page' not in self.dimensions:
             raise ValueError('Your report needs a page dimension to call this method.')
-        
-        #get the folders 
-        folders = ( 
-            self
-            .df
-            .page 
-                .str.split("/", expand=True)
-                #just from 3 to N 
-                .iloc[:,3:]
-                #rename columns by adding folder_ before the current name 
-                .rename(columns=lambda x: 'folder_'+str(x-2))
-            )
-        
+                
         #append folders to self.df horizontally 
         self.df = (
             pd
