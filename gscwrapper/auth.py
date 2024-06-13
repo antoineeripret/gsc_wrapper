@@ -29,7 +29,8 @@ def generate_auth(
     flow="web", 
     service_account_auth=False, 
     bigquery=False, 
-    bigquery_dataset=None
+    bigquery_dataset=None, 
+    port=8080
     ):
     
     if bigquery:
@@ -79,7 +80,7 @@ def generate_auth(
         else:
             raise ValueError("Client secrets must be a mapping or path to file")
         if flow == "web":
-            auth_flow.run_local_server()
+            auth_flow.run_local_server(port=port)
         elif flow == "console":
             auth_flow.run_console()
         else:
