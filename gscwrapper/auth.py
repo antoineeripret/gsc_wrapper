@@ -70,11 +70,6 @@ def generate_auth(
     if not credentials:
         
         if google_colab == True:
-            # Load the auth library
-            #included by default in Google Colab 
-            from google.colab import auth
-            # Authenticate the user
-            auth.authenticate_user()
             # Run the OAuth flow to get credentials
             auth_flow = Flow.from_client_secrets_file(client_config, OAUTH_SCOPE)
             auth_flow.redirect_uri = 'urn:ietf:wg:oauth:2.0:oob'

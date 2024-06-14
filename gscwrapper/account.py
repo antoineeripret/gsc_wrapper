@@ -70,9 +70,7 @@ class Account:
         return Webproperty(self.service, web_property)
 
     def __repr__(self):
-        return "<searchconsole.account.Account(client_id='{}')>".format(
-            self.credentials.client_id
-        )
+        return "<searchconsole.account.Account>"
 
 
 class Webproperty:
