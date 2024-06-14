@@ -19,7 +19,7 @@ OAUTH_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly"
 
 from apiclient import discovery
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import InstalledAppFlow, Flow
 from google.oauth2 import service_account
 
 def generate_auth(
@@ -30,7 +30,8 @@ def generate_auth(
     service_account_auth=False, 
     bigquery=False, 
     bigquery_dataset=None, 
-    port=8080
+    port=8080, 
+    google_colab = False 
     ):
     
     if bigquery:
@@ -67,6 +68,26 @@ def generate_auth(
         return Account(service, credentials)
 
     if not credentials:
+        
+        if google_colab == True:
+            # Load the auth library
+            #included by default in Google Colab 
+            from google.colab import auth
+            # Authenticate the user
+            auth.authenticate_user()
+            # Run the OAuth flow to get credentials
+            auth_flow = Flow.from_client_secrets_file(client_config, OAUTH_SCOPE)
+            auth_flow.redirect_uri = 'urn:ietf:wg:oauth:2.0:oob'
+
+            auth_url, _ = auth_flow.authorization_url(prompt='consent')
+
+            print('Please go to this URL: {}'.format(auth_url))
+
+            # The user needs to visit the auth_url, authorize access, and provide the resulting code
+            code = input('Enter the authorization code: ')
+            auth_flow.fetch_token(code=code)
+            credentials = auth_flow.credentials
+        
         if isinstance(client_config, collections.abc.Mapping):
             auth_flow = InstalledAppFlow.from_client_config(
                 client_config=client_config,
@@ -79,13 +100,16 @@ def generate_auth(
             )
         else:
             raise ValueError("Client secrets must be a mapping or path to file")
-        if flow == "web":
+        if flow == "web" and google_colab == False :
             auth_flow.run_local_server(port=port)
-        elif flow == "console":
+            credentials = auth_flow.credentials
+        elif flow == "console" and google_colab == False:
             auth_flow.run_console()
+            credentials = auth_flow.credentials
+        elif google_colab == True:
+            pass
         else:
             raise ValueError("Authentication flow '{}' not supported".format(flow))
-        credentials = auth_flow.credentials
     else:
         if isinstance(credentials, str):
             with open(credentials, 'r') as f:
