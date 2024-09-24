@@ -2,7 +2,15 @@ from datetime import datetime, timedelta
 import requests
 import xml.etree.ElementTree as ET
 import validators
-    
+
+
+#function to get a response code 
+def get_response_code(url):
+    try:
+        response = requests.head(url)
+        return response.status_code
+    except: 
+        return 'Impossible to get the response code'
 
 def get_date_days_ago(days=30):
     today = datetime.now()

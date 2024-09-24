@@ -2,6 +2,8 @@ from . import utils
 import time 
 import pandas as pd 
 from copy import deepcopy
+from .stopwords import stopwords
+from .regex import WORD_DELIM
 
 #variables we'll use in this code 
 #added here to follow DRY principle
@@ -1288,3 +1290,133 @@ class Report:
         )
         
         return self_copy
+    
+    #function to know when a page or a query was first found
+    def add_first_found(self, dimension):
+        if dimension not in ['page','query']:
+            raise ValueError('Dimension must be either page or query.')
+        
+        if dimension not in self.dimensions:
+            raise ValueError(f'Your report needs a {dimension} dimension to call this method.')
+        
+        if 'date' not in self.dimensions:
+            raise ValueError('Your report needs a date dimension to call this method.')
+        
+        #create a copy of self to modify it 
+        self_copy = deepcopy(self)
+        #we create the df with the first_found column
+        first_found = (
+            self 
+            .df 
+            .assign(
+                date = lambda df_: pd.to_datetime(df_['date'])
+            )
+            .groupby(dimension, as_index=False)
+            .agg({'date': 'min'})
+            .rename(columns={'date': f'first_found_{dimension}'})
+        )
+        
+        #we merge and return the result 
+        self_copy.df = (
+            self_copy
+            .df
+            .merge(
+                first_found,
+                on=dimension,
+                how='left'
+            )
+        )
+        
+        return self_copy
+        
+    #heavily inspired by https://advertools.readthedocs.io/en/master/_modules/advertools/word_frequency.html 
+    #fonction to return word frequency 
+    def word_frequency(
+        #the df with query and the dimensions 
+        self, 
+        #the number of words we want to analyze 
+        phrase_len=1, 
+        #the stopwords we want to remove 
+        stopwords=stopwords['english'], 
+        #custom stopwords we want to remove
+        rm_words=[]
+    ):
+        
+        #needed for part of the process 
+        from collections import defaultdict
+        
+        #we need the query dimension
+        if 'query' not in self.dimensions:
+            raise ValueError('Your report needs a query dimension to call this method.')
+        
+        #we need clicks and impressions 
+        if not all(elem in self.metrics for elem in ['clicks','impressions']):
+            raise ValueError('Your report needs clicks and impressions as metrics to call this method')
+        
+        #we split using the spaces 
+        word_split = [text.lower().split() for text in self.df['query']]
+        #we also split using other delimiters we have stored 
+        word_split = [[word.strip(WORD_DELIM) for word in text] for text in word_split]
+        #we keep only the words based on our phrase_len limit 
+        word_split = [[' '.join(s[i:i + phrase_len]) for i in range(len(s) - phrase_len + 1)] for s in word_split]
+        
+        #we lower the stopwords
+        stopwords = [word.lower() for word in stopwords]
+        #we create a dictionary with the default values
+        word_freq = defaultdict(lambda: [0, 0, 0])
+        
+        #we loop our words and our values 
+        for text, clicks, impressions in zip(word_split, self.df['clicks'], self.df['impressions']):
+            for word in text:
+                if word.lower() in rm_words:
+                    continue 
+                if word.lower() in stopwords:
+                    continue
+                word_freq[word.lower()][0] += 1
+                word_freq[word.lower()][1] += clicks
+                word_freq[word.lower()][2] += impressions
+        
+        columns = ["count", "clicks", "impressions"]
+        word_freq = (
+            pd
+            .DataFrame
+            .from_dict(word_freq, columns=columns, orient="index")
+        )
+        return word_freq
+    
+    #function to get the response codes of the pages 
+    def get_response_codes(self, wait_time=0): 
+        from tqdm import tqdm
+        
+        #we need the page dimension
+        if 'page' not in self.dimensions:
+            raise ValueError('Your report needs a page dimension to call this method.')
+        
+        #we create the unique list of page s
+        pages = self.df['page'].unique().tolist()
+        #we create the dict where we'll store our results 
+        response_codes = {}
+        #we loop our pages and get  the response code 
+        #and append it to the dict 
+        for page in tqdm(pages):
+            response_codes[page] = utils.get_response_code(page)
+            if wait_time > 0:
+                time.sleep(wait_time)
+        
+        #we load the result into a dataframe
+        response_codes = pd.DataFrame(response_codes.items(), columns=['page', 'response_code'])
+        
+        #we create a copy of self to modify it 
+        self_copy = deepcopy(self)
+        self_copy.df = (
+            self_copy
+            .df
+            .merge(
+                response_codes,
+                on='page',
+                how='left'
+            )
+        )
+        
+        return self_copy
+
