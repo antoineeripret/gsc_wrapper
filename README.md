@@ -32,7 +32,19 @@ I've decided to create my own based on my most common needs as a SEO profesionna
 
 ## Can I run it in a Jupyter Notebook? 
 
-While I haven't debugged my library on Colab and other similar products, I use (extensively) Jupyter notebooks (through VS Code) on my local machine, and it works perfectly. If you have any issue, please let me know and I'll have a look. 
+This library works perfectly with Google Colab and similar products. You just have to adapt slightly the code when you use the `generate_auth()` function explained [here](./README-API.md). 
+
+```python
+( 
+           gscwrapper
+           .generate_auth(
+               client_config = "/client_secret.json", 
+               serialize="/credentials.json",
+               #extra param to make it work with Colab
+               google_colab=True
+           )
+)
+```
 
 Unfortunately, I can't fix an issue that has to do with how some companies handle their dependencies (enforcing a rule to prevent a library from updating for instance). 
 
