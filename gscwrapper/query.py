@@ -352,7 +352,12 @@ class Report:
         
         #check tha the period is valid
         if period not in PERIODS:
-            raise ValueError('Period not valid. You can only use D, W, M, Q, QE or Y.')
+            raise ValueError('Period not valid. You can only use D, W, M, ME, Q, QE or Y.')
+        
+        #we change the values in some cases to avoid issues with future versions of Pandas 
+        #M should be ME and Q should be QE 
+        if period in ['Q','M']: 
+            period += 'E'
         
         return (
             self
