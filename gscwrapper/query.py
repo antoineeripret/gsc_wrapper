@@ -55,6 +55,18 @@ class Query:
     #range of dates for the GSC extraction 
     #unlike the original function from https://github.com/joshcarty/google-searchconsole/tree/master, we can't provide a days argument
     def range(self, start=None, stop=None):
+        """
+        Sets the date range for the query.
+
+        This method updates the query's raw request body with the specified start and stop dates. It also sets the instance variables `start_date` and `stop_date` to the provided values.
+
+        Args:
+            start (str, optional): The start date of the range in 'YYYY-MM-DD' format. Defaults to None.
+            stop (str, optional): The end date of the range in 'YYYY-MM-DD' format. Defaults to None.
+
+        Returns:
+            Query: The updated Query object.
+        """
         self.raw.update({
             'startDate': start,
             'endDate': stop, 
@@ -67,6 +79,17 @@ class Query:
     
     #list of dimensions 
     def dimensions(self, dimensions=None):
+        """
+        Sets the dimensions for the query.
+
+        This method updates the query's raw request body with the specified dimensions.
+
+        Args:
+            dimensions (list): The dimensions to be set for the query. Defaults to None.
+
+        Returns:
+            Query: The updated Query object.
+        """
         #we need to provide at least one dimension 
         if not dimensions: 
             raise ValueError('Please provide at least one dimension.')
@@ -86,8 +109,21 @@ class Query:
     #list of filters 
     #we can apply this method more than once if we want to add more filters
     #note that these filter are applied with an AND operator (only option available in the API)
-    def filter(self, dimension, expression, operator='equals',
-            group_type='and'):
+    def filter(self, dimension, expression, operator='equals', group_type='and'):
+        """
+        Applies a filter to the query based on the specified dimension, expression, operator, and group type.
+
+        This method updates the query's raw request body with a new filter. The filter is applied to the specified dimension using the given expression and operator. The group type determines how this filter is combined with existing filters.
+
+        Args:
+            dimension (str): The dimension to which the filter is applied.
+            expression (str): The expression to filter by.
+            operator (str): The operator to use for the filter. Defaults to 'equals'.
+            group_type (str): The type of group to apply the filter to. Defaults to 'and' (only option available), 
+
+        Returns:
+            Query: The updated Query object.
+        """
         #check that the values are correct 
         if dimension not in DIMENSIONS:
             raise ValueError('Dimension not valid. Check https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.filters.dimension for the accepted values.')
@@ -116,6 +152,17 @@ class Query:
 
     #define the search type
     def search_type(self, search_type='web'):
+        """
+        Sets the search type for the query.
+
+        This method updates the query's raw request body with the specified search type. The default search type is 'web'.
+
+        Args:
+            search_type (str, optional): The search type to set. Defaults to 'web'.
+
+        Returns:
+            Query: The updated Query object.
+        """
         if search_type not in SEARCH_TYPES:
             raise ValueError('Search type not valid. Check https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#type for the accepted values.')
         self.raw['type'] = search_type
@@ -123,6 +170,17 @@ class Query:
 
     #define the data state 
     def data_state(self, data_state='final'):
+        """
+        Sets the data state for the query.
+
+        This method updates the query's raw request body with the specified data state. The default data state is 'final'.
+
+        Args:
+            data_state (str, optional): The data state to set. Defaults to 'final'.
+
+        Returns:
+            Query: The updated Query object.
+        """
         if data_state not in DATA_STATES:
             raise ValueError('Data state not valid. Check https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dataState for the accepted values.')
         self.raw['dataState'] = data_state
@@ -130,6 +188,17 @@ class Query:
 
     #limit the number of rows we want to return 
     def limit(self, limit=None):
+        """
+        Sets the limit for the number of rows to be returned in the query.
+
+        This method updates the query's raw request body with the specified limit. The default limit is None, which means no limit is set.
+
+        Args:
+            limit (int, optional): The limit for the number of rows to be returned. If None, no limit is set.
+
+        Returns:
+            Query: The updated Query object.
+        """
         #we cannot call this method without the limit argument
         if limit is None:
             raise ValueError('Please provide a limit.')
@@ -147,6 +216,14 @@ class Query:
     
     #method to retrieve the data
     def get(self):
+        """
+        Executes the query and retrieves the data.
+
+        This method sends the query to the Google Search Console API and retrieves the data. It also handles pagination if the data exceeds the row limit set in the query.
+
+        Returns:
+            Report: A Report object containing the retrieved data.
+        """
         #where we'll store our data 
         report = []
         #boooleans to control the flow 
@@ -219,9 +296,12 @@ class Query:
 
 class Report:
     """
-    Executing a query will return a report, which contains the requested data as pandas DataFrame. 
-    We can then apply several analysis on the data retrieved. 
+    Represents a report generated from a query execution, containing the requested data as a pandas DataFrame. 
+    This allows for various analyses to be performed on the retrieved data.
     
+    Args:
+        df (pandas.DataFrame): The DataFrame containing the data retrieved from the query.
+        webproperty (str): The web property associated with the report.
     """
     
     def __init__(self, df, webproperty):
@@ -240,6 +320,18 @@ class Report:
     
     @classmethod
     def from_dataframe(cls, df, webproperty):
+        """
+        Creates a Report instance from a pandas DataFrame and a web property.
+
+        This method is a class method that allows creating a Report instance directly from a pandas DataFrame and a web property, without the need to manually create a Query object and execute it.
+
+        Args:
+            df (pandas.DataFrame): The DataFrame containing the data for the report.
+            webproperty (str): The web property associated with the report.
+
+        Returns:
+            Report: A Report instance created from the provided DataFrame and web property.
+        """
         return cls(df, webproperty)
         
     def __repr__(self):
@@ -260,16 +352,48 @@ class Report:
     )
     
     def show_data(self):
+        """
+        Returns the DataFrame containing the report data.
+
+        This method returns the pandas DataFrame associated with the report, which includes the data for the specified dimensions and metrics.
+
+        Returns:
+            pandas.DataFrame: The DataFrame containing the report data.
+        """
         return self.df
     
-    #function to filter data 
     def filter(self, query):
+        """
+        Filters the report data based on a given query.
+
+        This method creates a deep copy of the current report instance, applies the given query to its DataFrame using pandas' query method, and returns a new Report instance with the filtered data.
+
+        Args:
+            query (str): The query string to filter the data. This string should be a valid pandas query string.
+
+        Returns:
+            Report: A new Report instance with the filtered data.
+        """
         self_copy = deepcopy(self)
         self_copy.df = self_copy.df.query(query)
         return deepcopy(self_copy) 
     
     #inspired by https://github.com/eliasdabbas/advertools
     def url_to_df(self):
+        """
+        Converts the 'page' dimension in the report's DataFrame into its constituent parts (scheme, netloc, path, and last folder) and appends them as new columns to the DataFrame.
+
+        This method is designed to break down URLs in the 'page' dimension into their individual components, making it easier to analyze and understand the structure of the URLs in the report. The method appends the following columns to the DataFrame:
+
+        - scheme: The protocol used in the URL (e.g., http or https).
+        - netloc: The network location part of the URL (e.g., example.com).
+        - path: The path part of the URL (e.g., /path/to/resource).
+        - last_folder: The last folder in the URL path (e.g., resource).
+
+        Returns:
+            Report: The Report instance with the modified DataFrame containing the URL components.
+        """
+        
         if 'page' not in self.dimensions:
             raise ValueError('Your report needs a page dimension to call this method.')
                 
@@ -309,6 +433,16 @@ class Report:
     # method to create a CTR yield curve 
     # concept explained here : https://www.aeripret.com/ctr-yield-curve/
     def ctr_yield_curve(self):
+        """
+        This method is used to create a CTR (Click-Through Rate) yield curve.
+
+        The CTR yield curve is a graphical representation of the relationship between the position of a search result and its CTR. It is a useful tool for understanding the performance of different search positions and can be used to inform SEO strategies.
+
+        The method requires the 'query' and 'date' dimensions, as well as the 'clicks', 'impressions', and 'position' metrics to be present in the report.
+
+        Returns:
+            pandas.DataFrame: A DataFrame containing the CTR yield curve. The DataFrame is indexed by the position of the search result and contains the CTR, clicks, impressions, and keyword count for each position.
+        """
         
         if not all(elem in self.dimensions for elem in ['query','date']):
             raise ValueError('Your report needs a query and a date dimension to call this method.')
@@ -346,6 +480,17 @@ class Report:
 
     #create a function to easily group data by period 
     def group_data_by_period(self, period):
+        """
+        This method groups the data by a specified period.
+
+        It takes a period as input and returns a DataFrame with the data grouped by that period. The period can be one of the following: 'D' for daily, 'W' for weekly, 'M' for monthly, 'Q' for quarterly, 'Y' for yearly.
+
+        Args:
+            period (str): The period by which to group the data.
+
+        Returns:
+            pandas.DataFrame: A DataFrame with the data grouped by the specified period.
+        """
         #check if we have a date dimension
         if 'date' not in self.dimensions:
             raise ValueError('Your report needs a date dimension to call this method.')
@@ -379,7 +524,19 @@ class Report:
 
     #funtion to know if a page is active (has clicks or has impressions)
     #from a list of URLs or a sitemap
-    def active_pages(self,sitemap_url=None, urls=None):
+    def active_pages(self, sitemap_url=None, urls=None):
+        """
+        Identifies active pages based on clicks and impressions.
+
+        This method determines which pages are active by checking if they have any clicks or impressions. It can take either a sitemap URL or a list of URLs as input. If a sitemap URL is provided, it downloads the URLs from the sitemap. If a list of URLs is provided, it directly uses the list. The method then merges the URLs with the data from the report to identify active pages.
+
+        Args:
+            sitemap_url (str, optional): The URL of the sitemap to download URLs from. Defaults to None.
+            urls (list, optional): A list of URLs to check for activity. Defaults to None.
+
+        Returns:
+            pandas.DataFrame: A DataFrame containing the active status of each page based on clicks and impressions.
+        """
         
         import numpy as np
         
@@ -433,6 +590,17 @@ class Report:
 
     #inspired by https://github.com/jmelm93/seo_cannibalization_analysis 
     def cannibalization(self, brand_variants):
+        """
+        This method calculates the cannibalization effect (excluding brand variants) on the web property.
+
+        The cannibalization effect is (often) the negative impact of a web page's ranking on the search results of another page from the same website. This can happen when multiple pages from the same website are competing for the same keyword.
+
+        Args:
+            brand_variants (list): A list of brand variants to be excluded in the logic.
+
+        Returns:
+            pandas.DataFrame: A DataFrame containing the cannibalization effect for each brand variant. Each row represents a brand variant.
+        """
         import numpy as np 
         #check if we have the required dimensions 
         if not all(elem in self.dimensions for elem in ['query','page']):
@@ -611,6 +779,16 @@ class Report:
 
     #keyword gap
     def keyword_gap(self, df=None, keyword_column=None):
+        """
+        Identifies rows in a DataFrame where a specified keyword column does not contain any of the keywords present in the 'query' dimension of the report.
+
+        Args:
+            df (pd.DataFrame, optional): The DataFrame to check for keyword gaps. Defaults to None.
+            keyword_column (str, optional): The column name in the DataFrame where keywords are stored. Defaults to None.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing rows where the keyword_column does not contain any of the keywords present in the 'query' dimension.
+        """
         
         # Check if df is a pandas DataFrame
         if not isinstance(df, pd.DataFrame):
@@ -630,6 +808,17 @@ class Report:
         
     #causal impact 
     def causal_impact(self, intervention_date = None ):
+        """
+        Analyzes the causal impact of an intervention on the clicks metric over time.
+
+        This method uses the CausalImpact library to estimate the causal effect of an intervention on the clicks metric. It requires a specific intervention date to be defined.
+
+        Args:
+            intervention_date (str, optional): The date of the intervention in 'YYYY-MM-DD' format. Defaults to None.
+
+        Returns:
+            CausalImpact: An instance of the CausalImpact class, which can be used to analyze and visualize the causal impact of the intervention.
+        """
         
         #we neeed some extra libraries for this method 
         from causalimpact import CausalImpact
@@ -674,8 +863,18 @@ class Report:
         #usually ci.summary() or ci.plot() are enough
         return ci 
     
-    #function to update the urls in the report using a redirect mapping 
     def update_urls(self, redirect_mapping):
+        """
+        Updates the URLs in the report using a redirect mapping.
+
+        This method updates the 'page' dimension in the report's DataFrame based on a provided redirect mapping DataFrame. The redirect mapping should contain 'from' and 'to' columns, specifying the original and target URLs respectively.
+
+        Args:
+            redirect_mapping (pd.DataFrame): A pandas DataFrame containing the redirect mapping. It must have 'from' and 'to' columns.
+
+        Returns:
+            Query: A new Query object with the updated URLs.
+        """
         
         #redirect mapping needs to be a pandas DataFrame
         if not isinstance(redirect_mapping, pd.DataFrame):
@@ -716,8 +915,18 @@ class Report:
         return self_copy
     
     #extract search volume from dataforSEO 
-    def extract_search_volume(self, location_code, client_email, client_password, calculate_cost = True):
-        #check that the location code is an integer
+    def extract_search_volume(self, location_code, client_email, client_password, calculate_cost=True):
+        """
+        Extracts search volume data for a given location code and client credentials.
+
+        This method retrieves search volume data for a specified location code using the provided client email and password. It also calculates the cost of the extraction if requested.
+
+        Args:
+            location_code (int): The location code for which to extract search volume data.
+            client_email (str): The email address associated with the client account.
+            client_password (str): The password for the client account.
+            calculate_cost (bool, optional): If True, calculates the cost of the extraction. Defaults to True.
+        """
         if not isinstance(location_code, int):
             raise ValueError('Location code must be an integer.')
         
@@ -768,8 +977,20 @@ class Report:
                 .drop('keyword', axis = 1)
             )
             
-    #fonctions to find potential contents to kill 
     def find_potential_contents_to_kill(self, sitemap_url=None, clicks_threshold = 0, impressions_threshold = 0):
+        """
+        Identifies potential content to remove based on clicks and impressions thresholds.
+
+        This method analyzes the report data to find pages that have clicks and impressions below specified thresholds. It requires a sitemap URL to download the list of URLs, and then filters the report data based on the provided thresholds.
+
+        Args:
+            sitemap_url (str): The URL of the sitemap to download URLs from. 
+            clicks_threshold (int, optional): The minimum number of clicks required to keep a page. Defaults to 0.
+            impressions_threshold (int, optional): The minimum number of impressions required to keep a page. Defaults to 0.
+
+        Returns:
+            pandas.DataFrame: A DataFrame containing the URLs of pages that are below the specified thresholds for clicks and impressions.
+        """
         #we need the page dimension
         if 'page' not in self.dimensions:
             raise ValueError('Your report needs a page dimension to call this method.')
@@ -836,6 +1057,21 @@ class Report:
         type='page', 
         period='week'
         ):
+        """
+        Identifies content that may need to be updated based on a decay in performance over time.
+
+        This method analyzes the performance of content over a specified period (week or month) and identifies content that has experienced a significant decay in performance, as measured by a specified metric (e.g., clicks). The decay is calculated as a percentage of the maximum performance over the period.
+
+        Args:
+            threshold_decay (float, optional): The threshold for decay as a percentage. Defaults to 0.25.
+            metric (str, optional): The metric to use for measuring performance. Defaults to 'clicks'.
+            threshold_metric (int, optional): The minimum value for the metric to consider content for decay analysis. Defaults to 100.
+            type (str, optional): The type of content to analyze (page or query). Defaults to 'page'.
+            period (str, optional): The period over which to analyze performance (week or month). Defaults to 'week'.
+
+        Returns:
+            DataFrame: A DataFrame containing the content that has experienced a decay in performance above the specified threshold.
+        """
         #check that we have the page and date dimensions 
         if not all(elem in self.dimensions for elem in [type,'date']):
             raise ValueError(f'Your report needs a {type} and a date dimension to call this method.')
@@ -943,6 +1179,17 @@ class Report:
     
     #function to check if we have pages in GSC that are not in our sitemap
     def pages_not_in_sitemap(self, sitemap_url):
+        """
+        Identifies pages in the Google Search Console that are not present in the provided sitemap URL.
+
+        This method compares the pages in the Google Search Console data with the URLs present in the provided sitemap URL. It returns a DataFrame containing the pages that are present in the Google Search Console data but not in the sitemap.
+
+        Args:
+            sitemap_url (str): The URL of the sitemap to compare with the Google Search Console data.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing the pages that are present in the Google Search Console data but not in the sitemap.
+        """
         #we need the page dimension
         if 'page' not in self.dimensions:
             raise ValueError('Your report needs a page dimension to call this method.')
@@ -960,6 +1207,18 @@ class Report:
     
     #function to find winners and losers between two period 
     def winners_losers(self, period_from, period_to):
+        """
+        Identifies winners and losers between two specified periods based on the 'clicks' metric.
+
+        This method compares the 'clicks' metric between two periods and identifies pages that have gained or lost clicks. It returns a DataFrame with the pages, their total clicks for each period, and a label indicating whether they are a winner or a loser.
+
+        Args:
+            period_from (list): A list of two dates in 'YYYY-MM-DD' format, specifying the start and end of the first period.
+            period_to (list): A list of two dates in 'YYYY-MM-DD' format, specifying the start and end of the second period.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing the pages, their total clicks for each period, and a label indicating whether they are a winner or a loser.
+        """
         from datetime import datetime
         
         #we need to have the page and the date dimensions 
@@ -1035,6 +1294,17 @@ class Report:
         
     #fonction to filter to keep only keyword with at least X keywords 
     def find_long_tail_keywords(self, number_of_words):
+        """
+        Filters the keywords to keep only those with at least a certain number of words.
+
+        This method calculates the number of words in each keyword and filters out those with fewer than the specified number of words.
+
+        Args:
+            number_of_words (int): The minimum number of words a keyword must have to be included in the result.
+
+        Returns:
+            DataFrame: A DataFrame containing only the keywords with at least the specified number of words.
+        """
         #check that the number of words is a positive integer greater than 0 
         if not isinstance(number_of_words, int):
             raise ValueError('The number of words argument needs to be an integer')
@@ -1058,6 +1328,14 @@ class Report:
     
     #find outliers based on CTR 
     def find_ctr_outliers(self):
+        """
+        Identifies outliers based on Click-Through Rate (CTR) for each query.
+
+        This method calculates the CTR for each query and identifies outliers based on the expected CTR curve for different positions. It returns a DataFrame with the query, real CTR, expected CTR, and a flag indicating if the query is an outlier.
+
+        Returns:
+            DataFrame: A DataFrame containing the query, real CTR, expected CTR, and an outlier flag.
+        """
         import numpy as np 
         #first we need to get our ctr curve for our data 
         ctr_yield_curve = self.ctr_yield_curve().filter(items=['position','ctr'])
@@ -1119,9 +1397,24 @@ class Report:
         return df 
         
     def abcd(self, metric='clicks'):
-    #Assign an ABCD class and rank to a metric based on cumulative percentage contribution
-    #Based on https://github.com/practical-data-science/ecommercetools/blob/master/ecommercetools/seo/google_search_console.py 
-    #even if code is different, the logic is the same
+        """
+        Assigns an ABCD class and rank to a metric based on cumulative percentage contribution.
+
+        This method sorts the data by the specified metric in descending order, calculates the cumulative percentage contribution of each row to the total metric value, and assigns an ABCD class based on the cumulative percentage. The ABCD class is determined as follows:
+        - A: 0-50%
+        - B: 51-75%
+        - C: 76-90%
+        - D: 91-100%
+
+        Args:
+            metric (str, optional): The metric to use for ABCD classification. Defaults to 'clicks'.
+
+        Returns:
+            pd.DataFrame: A DataFrame with the original data plus two additional columns: 'metric_cumsum' representing the cumulative percentage contribution of each row to the total metric value, and 'abcd' representing the ABCD class assigned to each row based on the cumulative percentage.
+        """
+        #Assign an ABCD class and rank to a metric based on cumulative percentage contribution
+        #Based on https://github.com/practical-data-science/ecommercetools/blob/master/ecommercetools/seo/google_search_console.py 
+        #even if code is different, the logic is the same
         
         #check that we have the metric in our metrics
         if metric not in self.metrics:
@@ -1150,6 +1443,14 @@ class Report:
         )
     
     def pages_per_day(self):
+        """
+        Calculates the number of unique pages per day in the data.
+
+        This method groups the data by date and calculates the number of unique pages for each day. The result is a DataFrame with the date as the index and the number of unique pages as the value. This can be interpreted as the number of pages active on each day.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing the date as the index and the number of unique pages as the value.
+        """
         #check that we have the date and page dimensions
         if not all(elem in self.dimensions for elem in ['date','page']):
             raise ValueError('Your report needs a date and a page dimension to call this method.')
@@ -1166,6 +1467,14 @@ class Report:
         )
         
     def pages_lifespan(self):
+        """
+        Calculates the lifespan of pages based on the number of unique dates they appear in the data.
+
+        This method groups the data by page and calculates the number of unique dates each page appears in. The result is a DataFrame with the page as the index and the number of unique dates as the value. This can be interpreted as the lifespan of each page in terms of the number of days it was active.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing the page as the index and the lifespan (number of unique dates) as the value.
+        """
         #check that we have the date and page dimensions
         if not all(elem in self.dimensions for elem in ['date','page']):
             raise ValueError('Your report needs a date and a page dimension to call this method.')
@@ -1185,6 +1494,14 @@ class Report:
         )
     
     def seasonality_per_day(self):
+        """
+        Analyzes the seasonality of clicks and impressions per day of the week.
+
+        This method calculates the total clicks and impressions for each day of the week, providing insights into the seasonality of the data. It returns a DataFrame with the day of the week as the index and the total clicks and impressions as columns.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing the total clicks and impressions for each day of the week.
+        """
         #check that we have the date dimension
         if 'date' not in self.dimensions:
             raise ValueError('Your report needs a date dimension to call this method.')
@@ -1208,6 +1525,17 @@ class Report:
         )
     
     def replace_query_from_list(self, list_to_replace):
+        """
+        Replaces elements in the 'query' column of the DataFrame with a placeholder string.
+
+        This method takes a list of elements to replace and applies them to the 'query' column of the DataFrame. Each element in the list is replaced with a placeholder string "_element_". The method returns a new DataFrame with the replaced elements.
+
+        Args:
+            list_to_replace (list): A list of elements to replace in the 'query' column.
+
+        Returns:
+            pd.DataFrame: A new DataFrame with the elements in the 'query' column replaced with "_element_".
+        """
         from functools import reduce
         #Function to apply replacements
         def replace_element(column, element):
@@ -1229,6 +1557,14 @@ class Report:
     #inspired by https://www.searchenginejournal.com/big-query-and-gsc-data-content-performance-analysis/508481/ 
     #funtion to get the unique query count per page
     def uqc(self):
+        """
+        Calculates the Unique Query Count (UQC) per page.
+
+        This method returns a DataFrame with the unique query count per page. It groups the data by the 'page' dimension and counts the unique queries for each page. The result is sorted in descending order by the unique query count.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing the unique query count per page, sorted in descending order.
+        """
         #check that we have the query dimension
         if 'query' not in self.dimensions:
             raise ValueError('Your report needs a query dimension to call this method.')
@@ -1247,6 +1583,17 @@ class Report:
     
     #method used to classify pages based on a DataFrame with rules 
     def classify_pages(self, rules):
+        """
+        Classifies pages based on a DataFrame with rules.
+
+        This method takes a DataFrame of rules and applies them to the pages in the report. The rules DataFrame must have columns 'category', 'rule', and 'type'. The 'category' column specifies the category to assign to a page if the rule matches. The 'rule' column specifies the rule to match against the page URL. The 'type' column specifies the type of match to perform, which can be 'equals', 'contains', or 'includingRegex'.
+
+        Args:
+            rules (pd.DataFrame): A DataFrame containing the rules for classifying pages.
+
+        Returns:
+            Query: The updated Query object with the classified pages.
+        """
         #check that we have the page dimension
         if 'page' not in self.dimensions:
             raise ValueError('Your report needs a page dimension to call this method.')
@@ -1298,6 +1645,17 @@ class Report:
     
     #function to know when a page or a query was first found
     def add_first_found(self, dimension):
+        """
+        Adds a column to the DataFrame indicating when a page or query was first found.
+
+        This method adds a new column to the DataFrame indicating the first date a page or query was found. It requires the 'date' dimension to be present in the DataFrame.
+
+        Args:
+            dimension (str): The dimension to find the first occurrence for. Must be either 'page' or 'query'.
+
+        Returns:
+            Query: A new Query object with the updated DataFrame.
+        """
         if dimension not in ['page','query']:
             raise ValueError('Dimension must be either page or query.')
         
@@ -1346,6 +1704,19 @@ class Report:
         #custom stopwords we want to remove
         rm_words=[]
     ):
+        """
+        Calculates the frequency of words or phrases in the query dimension.
+
+        This method analyzes the query dimension of the report and returns a DataFrame with the frequency of each word or phrase, along with the total clicks and impressions for each. The analysis can be done for single words or phrases of a specified length.
+
+        Args:
+            phrase_len (int, optional): The length of the phrases to analyze. Defaults to 1, which means single words will be analyzed.
+            stopwords (list, optional): A list of stopwords to ignore in the analysis. Defaults to the English stopwords from the nltk library.
+            rm_words (list, optional): A list of custom words to remove from the analysis. Defaults to an empty list.
+
+        Returns:
+            pandas.DataFrame: A DataFrame with the word or phrase frequencies, total clicks, and total impressions.
+        """
         
         #needed for part of the process 
         from collections import defaultdict
@@ -1391,6 +1762,17 @@ class Report:
     
     #function to get the response codes of the pages 
     def get_response_codes(self, wait_time=0): 
+        """
+        Retrieves the response codes of the pages.
+
+        This method iterates over the unique list of page URLs and retrieves the response code for each page. The response codes are stored in a dictionary where the keys are the page URLs and the values are the response codes.
+
+        Args:
+            wait_time (int, optional): The time to wait between each request. Defaults to 0.
+
+        Returns:
+            pandas.DataFrame: A DataFrame containing the list of page URLs and their corresponding response codes.
+        """
         from tqdm import tqdm
         
         #we need the page dimension

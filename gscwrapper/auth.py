@@ -33,6 +33,23 @@ def generate_auth(
     port=8080, 
     google_colab = False 
     ):
+    """
+    This function generates authentication for Google Search Console.
+    
+    Args:
+        client_config (str): The path to the client configuration file.
+        credentials (object, optional): The credentials object used for authentication with the Google Search Console API.
+        serialize (str, optional): The path to the serialized credentials file.
+        flow (str, optional): The flow type. Supported values are 'web' and 'installed_app'.
+        service_account_auth (bool, optional): If True, service account authentication is used. If False, OAuth2 authentication is used.
+        bigquery (bool, optional): If True, BigQuery authentication is used. If False, Google Search Console authentication is used.
+        bigquery_dataset (str, optional): The BigQuery dataset name.
+        port (int, optional): The port number for the local server.
+        google_colab (bool, optional): If True, the authentication is generated for Google Colab. If False, the authentication is generated for local use.
+    
+    Returns:
+        object: The authentication object.
+    """
     
     if bigquery:
         if not bigquery_dataset:
