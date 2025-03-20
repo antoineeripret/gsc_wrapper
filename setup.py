@@ -16,7 +16,7 @@ setup(
         'tqdm==4.66.1',
         'prophet==1.1.5',
         'pycausalimpact==0.1.1',
-        'numpy==1.26.3',
+        'numpy==2.0.2',
         'requests==2.32.3'  
     ], 
     # Additional metadata about your package.
