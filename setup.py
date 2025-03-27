@@ -14,7 +14,7 @@ setup(
         'pandas_gbq>=0.22.0',  
         'validators==0.23.2',
         'tqdm==4.66.1',
-        'prophet==1.1.5',
+        'prophet==1.1.6',
         'pycausalimpact==0.1.1',
         'numpy==2.0.2',
         'requests==2.32.3'  
