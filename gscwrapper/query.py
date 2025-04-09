@@ -12,7 +12,7 @@ from .regex import WORD_DELIM
 DIMENSIONS = ['country','device','page','query','searchAppearance','date']
 OPERATORS = ['equals','notEquals','contains','notContains','includingRegex','excludingRegex']
 SEARCH_TYPES = ['web', 'image', 'video', 'discover','googleNews','news']
-DATA_STATES = ['all','final']
+DATA_STATES = ['all','final', 'hourly_all']
 
 #this is not from the API but we'll use it to group data by period
 PERIODS = ['D','W','M','Q','Y','QE','ME']
