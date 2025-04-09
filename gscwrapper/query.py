@@ -9,7 +9,7 @@ from .regex import WORD_DELIM
 #added here to follow DRY principle
 #this will also ease updates if the API changes
 
-DIMENSIONS = ['country','device','page','query','searchAppearance','date']
+DIMENSIONS = ['country','device','page','query','searchAppearance','date', 'hour']
 OPERATORS = ['equals','notEquals','contains','notContains','includingRegex','excludingRegex']
 SEARCH_TYPES = ['web', 'image', 'video', 'discover','googleNews','news']
 DATA_STATES = ['all','final', 'hourly_all']
