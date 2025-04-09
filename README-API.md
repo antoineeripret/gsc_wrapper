@@ -137,7 +137,7 @@ Please be aware that you may be affected by [data sampling](https://www.aeripret
 * **filter**: you can decide to analyse just a part of your website. You can filter using any dimension or operator included below: 
 
 ```python
-DIMENSIONS = ['country','device','page','query','searchAppearance','date']
+DIMENSIONS = ['country','device','page','query','searchAppearance','date', 'hour']
 OPERATORS = ['equals','notEquals','contains','notContains','includingRegex','excludingRegex']
 ```
 
@@ -185,6 +185,7 @@ report = (
 ```
 When you run any of these code snippets, you'll generate a `Report` object. For more on that, please refer to the following documentation: [List of methods](./README-METHODS.md). 
 
+* **data_state**: if "all", data will include fresh data. If "final" (default value) or if this parameter is omitted, the returned data will include only finalized data. If "hourly_all", data will include hourly breakdown. This will indicate that hourly data includes partial data and should be used when grouping by the HOUR API dimension.
 
 ## Sitemaps 
 
