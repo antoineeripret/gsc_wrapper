@@ -9,5 +9,7 @@ gscwrapper/config
 /pyvenv.cfg
 /share
 *.pyc
-*.pyc
 gscwrapper/__pycache__/auth.cpython-310.pyc
+.venv 
+*.lock 
+*egg-info
