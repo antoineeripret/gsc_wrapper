@@ -3,11 +3,12 @@ import requests
 import xml.etree.ElementTree as ET
 import validators
 
-
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3" 
+HEADERS = {'User-Agent': USER_AGENT}
 #function to get a response code 
 def get_response_code(url):
     try:
-        response = requests.head(url)
+        response = requests.head(url, headers=HEADERS)
         return response.status_code
     except: 
         return 'Impossible to get the response code'
@@ -31,7 +32,7 @@ def create_n_grams(text, n=2):
 
 def fetch_sitemap_content(url):
     try:
-        response = requests.get(url)
+        response = requests.get(url, headers=HEADERS)
         response.raise_for_status()
         return response.content
     except requests.RequestException as e:
