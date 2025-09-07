@@ -101,11 +101,12 @@ def generate_auth(
 
             # Get authorization URL
             auth_url, _ = flow.authorization_url(access_type='offline', prompt='consent')
-            print("""Google page will open for authorization\n
-                  Select your account and accept the permissions\n
-                  You will be redirected to a page that will show an ERROR (this is normal)\n
-                  The URL of that error page will contain the code we need
-                  """)
+            print(f"Please go to this URL to authorize the application: {auth_url}")
+            print("Google page will open for authorization.")
+            print("Select your account and accept the permissions")
+            print("You will be redirected to a page that will show an ERROR (this is normal)")
+            print("The URL of that error page will contain the code we need")
+            print("***************************************************************************")
             print("IMPORTANT: After authorizing, copy the full URL of the error page:")
             callback_url = input('Paste the full URL here: ').strip()
             if not callback_url:
