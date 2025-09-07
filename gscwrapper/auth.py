@@ -12,6 +12,8 @@ http://google-auth-oauthlib.readthedocs.io/en/latest/reference/google_auth_oauth
 
 import collections.abc
 import json
+
+import urllib
 from .account import Account, Account_BQ
 
 # Define Oath scopes with read only access
@@ -88,17 +90,49 @@ def generate_auth(
         
         if google_colab == True:
             # Run the OAuth flow to get credentials
-            auth_flow = Flow.from_client_secrets_file(client_config, OAUTH_SCOPE)
-            auth_flow.redirect_uri = 'urn:ietf:wg:oauth:2.0:oob'
+            if isinstance(client_config, str):
+                flow = Flow.from_client_secrets_file(client_config, scopes=[OAUTH_SCOPE])
+            elif isinstance(client_config, collections.abc.Mapping):
+                flow = Flow.from_client_config(client_config, scopes=[OAUTH_SCOPE])
+            else:
+                raise ValueError("Client secrets must be a mapping or path to file")
+            # Configure redirect URI
+            flow.redirect_uri = 'http://localhost:8080/callback'
 
-            auth_url, _ = auth_flow.authorization_url(prompt='consent')
+            # Get authorization URL
+            auth_url, _ = flow.authorization_url(access_type='offline', prompt='consent')
+            print("""Google page will open for authorization\n
+                  Select your account and accept the permissions\n
+                  You will be redirected to a page that will show an ERROR (this is normal)\n
+                  The URL of that error page will contain the code we need
+                  """)
+            print("IMPORTANT: After authorizing, copy the full URL of the error page:")
+            callback_url = input('Paste the full URL here: ').strip()
+            if not callback_url:
+                raise ValueError("You must provide the callback URL")
+            # Extract the code from the URL
+            try:
+                parsed = urllib.parse.urlparse(callback_url)
+                params = urllib.parse.parse_qs(parsed.query)
+                if 'code' not in params:
+                    raise ValueError("The 'code' parameter was not found in the URL")
+                authorization_code = params['code'][0]
+                print(f"Code successfully extracted: {authorization_code[:20]}...")
+            except Exception as e:
+                print(f"Error processing the URL: {e}")
+                print("The URL should look something like this:")
+                print("http://localhost:8080/callback?code=4/0AX4XfWh...")
+                raise
+            try:
+                # Exchange code for token
+                flow.fetch_token(code=authorization_code)
+                credentials = flow.credentials
+                print("Authentication successful!")
 
-            print('Please go to this URL: {}'.format(auth_url))
+            except Exception as e:
+                print(f"Error during token exchange: {e}")
+                raise
 
-            # The user needs to visit the auth_url, authorize access, and provide the resulting code
-            code = input('Enter the authorization code: ')
-            auth_flow.fetch_token(code=code)
-            credentials = auth_flow.credentials
         
         if isinstance(client_config, collections.abc.Mapping):
             auth_flow = InstalledAppFlow.from_client_config(
