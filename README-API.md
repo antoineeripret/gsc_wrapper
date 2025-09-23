@@ -61,6 +61,28 @@ The first time you run this code, you'll be asked to visit an URL:
 - Click on "Continue" again 
 - Copy the authorization code and paste it in the input box that will have appeared in your terminal / notebook from where you run the code 
 
+#### Google Colab 
+
+If you're using Google Colab, follow these steps instead. 
+
+1. Go to the Google Cloud Console.
+2. Navigate to APIs & Services > Credentials.
+3. Open your OAuth 2.0 Client ID or create a new one (Web application)
+4. Under Authorized redirect URIs, add:
+
+```bash 
+http://localhost:8080/
+http://localhost
+```
+
+5. Save your changes and download the credentials
+
+When you go through the authorization process, you'll get to a page where the website cannot be reached.
+
+![alt text](img/image.png)
+
+In that case, just copy the code from the URL (such as http://localhost/?state=36kSaOGDH1npA0cfG1LJx3iSjwvVnd&code=4/0AVGzR1CgFP03SIShJoFrqDN6pd0GHMQJabO4l37fCsLejBFsJMTwdKAQriBRFs4G3BE7Gw&scope=https://www.googleapis.com/auth/webmasters.readonly where the code is **4/0AVGzR1CgFP03SIShJoFrqDN6pd0GHMQJabO4l37fCsLejBFsJMTwdKAQriBRFs4G3BE7Gw**) and paste it in Colab.
+
 
 #### Saving credentials 
 
