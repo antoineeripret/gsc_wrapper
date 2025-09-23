@@ -79,9 +79,7 @@ http://localhost
 
 When you go through the authorization process, you'll get to a page where the website cannot be reached.
 
-![alt text](img/image.png)
-
-In that case, just copy the code from the URL (such as http://localhost/?state=36kSaOGDH1npA0cfG1LJx3iSjwvVnd&code=4/0AVGzR1CgFP03SIShJoFrqDN6pd0GHMQJabO4l37fCsLejBFsJMTwdKAQriBRFs4G3BE7Gw&scope=https://www.googleapis.com/auth/webmasters.readonly where the code is **4/0AVGzR1CgFP03SIShJoFrqDN6pd0GHMQJabO4l37fCsLejBFsJMTwdKAQriBRFs4G3BE7Gw**) and paste it in Colab.
+Just copy the code from the URL (such as http://localhost/?state=36kSaOGDH1npA0cfG1LJx3iSjwvVnd&code=4/0AVGzR1CgFP03SIShJoFrqDN6pd0GHMQJabO4l37fCsLejBFsJMTwdKAQriBRFs4G3BE7Gw&scope=https://www.googleapis.com/auth/webmasters.readonly where the code is **4/0AVGzR1CgFP03SIShJoFrqDN6pd0GHMQJabO4l37fCsLejBFsJMTwdKAQriBRFs4G3BE7Gw**) and paste it in Colab.
 
 
 #### Saving credentials 
