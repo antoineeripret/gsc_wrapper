@@ -87,16 +87,19 @@ def generate_auth(
     if not credentials:
         
         if google_colab == True:
-            # Run the OAuth flow to get credentials
-            auth_flow = Flow.from_client_secrets_file(client_config, OAUTH_SCOPE)
-            auth_flow.redirect_uri = 'urn:ietf:wg:oauth:2.0:oob'
+            # Set up the flow with a local redirect URI
+            auth_flow = InstalledAppFlow.from_client_secrets_file(client_config, OAUTH_SCOPE)
+            auth_flow.redirect_uri = 'http://localhost:8080/'
 
+            # Get the authorization URL
             auth_url, _ = auth_flow.authorization_url(prompt='consent')
+            print('Please go to this URL and authorize access:')
+            print(auth_url)
 
-            print('Please go to this URL: {}'.format(auth_url))
-
-            # The user needs to visit the auth_url, authorize access, and provide the resulting code
+            # Paste the authorization code you get after authorizing
             code = input('Enter the authorization code: ')
+
+            # Exchange the code for credentials
             auth_flow.fetch_token(code=code)
             credentials = auth_flow.credentials
         
