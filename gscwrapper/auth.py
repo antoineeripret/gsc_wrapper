@@ -11,7 +11,7 @@ http://google-auth-oauthlib.readthedocs.io/en/latest/reference/google_auth_oauth
 """
 
 import collections.abc
-import json
+import json, urllib
 from .account import Account, Account_BQ
 
 # Define Oath scopes with read only access
@@ -97,10 +97,17 @@ def generate_auth(
             print(auth_url)
 
             # Paste the authorization code you get after authorizing
-            code = input('Enter the authorization code: ')
+            auth_code = input('Enter the authorization code or url: ')
+            if 'http://localhost:8080' in auth_code:
+                # Extract the code from the URL
+                parsed = urllib.parse.urlparse(auth_code)
+                params = urllib.parse.parse_qs(parsed.query)
+                if 'code' not in params:
+                    raise ValueError('Invalid URL: No code parameter found.')
+                auth_code = params.get('code', [None])[0]    
 
             # Exchange the code for credentials
-            auth_flow.fetch_token(code=code)
+            auth_flow.fetch_token(code=auth_code)
             credentials = auth_flow.credentials
         
         if isinstance(client_config, collections.abc.Mapping):
