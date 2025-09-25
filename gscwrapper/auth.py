@@ -107,8 +107,15 @@ def generate_auth(
                 auth_code = params.get('code', [None])[0]    
 
             # Exchange the code for credentials
-            auth_flow.fetch_token(code=auth_code)
-            credentials = auth_flow.credentials
+            try:
+                # Exchange code for token
+                flow.fetch_token(code=auth_code)
+                credentials = flow.credentials
+                print("Authentication successful!")
+
+            except Exception as e:
+                print(f"Error during token exchange: {e}")
+                raise
         
         if isinstance(client_config, collections.abc.Mapping):
             auth_flow = InstalledAppFlow.from_client_config(
