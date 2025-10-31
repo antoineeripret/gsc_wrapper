@@ -84,10 +84,8 @@ Most of them are available for both BQ and the API. Some of them just for the AP
 - [group_data_by_period()](#group_data_by_period)
 - [active_pages()](#active_pages)
 - [cannibalization()](#cannibalization)
-- [forecast()](#forecast)
 - [brand_vs_no_brand()](#brand_vs_no_brand)
 - [keyword_gap()](#keyword_gap)
-- [causal_impact()](#causal_impact)
 - [update_urls()](#update_urls)
 - [extract_search_volume()](#extract_search_volume)
 - [find_potential_contents_to_kill()](#find_potential_contents_to_kill)
@@ -246,28 +244,6 @@ This method would return the following table, with a selection of the pages that
 |https://www.website.com/blog/content_1|yyyyy|15|387|62.50|44|34.09| |
 |https://www.website.com/blog/content_2|yyyyy|9|148|37.50|23|39.13| |
 
-#### forecast()
-
-|Required dimensions|Required metrics| Output|BQ ready|
-|:----|:----|:----|:----|
-|date|clicks |pd.DataFrame|:white_check_mark:|
-
-This method is used to forecast traffic, using [prophet](https://facebook.github.io/prophet/). Using the data available in our `Report`object, we can use this external library to forecast future clicks. 
-
-The function is simple to use but please note that **I do not advise to create forecast if you don't have at least a decent number of days in your `Report` object**, otheriwse the forecast will be inaccurate. 
-
-You can specify the number of days you want to forecast as the only accepted parameter for this method. 
-
-```python 
-
-(
-    report 
-    .forecast(days=10)
-)
-```
-
-This method returns the DataFrame as created by Prophet, and if you want to understand the column names, have a look at [their documentation](https://facebook.github.io/prophet/). 
-
 #### brand_vs_no_brand()
 
 |Required dimensions|Required metrics| Output|BQ ready|
@@ -324,31 +300,6 @@ This method allows you to perform a similar operation by **comparing the keyword
 ```
 
 This method will filter your `df`to keep only the keywords that are not included in your `Report` object. 
-
-#### causal_impact()
-
-|Required dimensions|Required metrics| Output|BQ ready|
-|:----|:----|:----|:----|
-|date|clicks | Causal Impact object|:white_check_mark:|
-
-GSC is a great tool to understand if some changes applied to a specific set of pages is having a positive impact. 
-
-This method allows you to use [Causal Impact](https://pypi.org/project/pycausalimpact/) to infer the expected effect a given intervention (or any action) had on some response variable by analyzing differences between expected and observed time series data.
-
-```python 
-
-(
-    report 
-    .causal_impact(
-        intervention_date="2023-01-01",
-    )
-)
-
-```
-
-To ensure that the results make sense, **you need to have at least the same amount of days before & after the intervention date in your `Report`object**.
-
-This method will return a `ci`object. Refer to the [documentation](https://pypi.org/project/pycausalimpact/) to understand how you can explore the results. 
 
 
 #### update_urls()
