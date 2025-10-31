@@ -399,31 +399,6 @@ class Report_BQ:
             return df 
     
     
-    def forecast(self, days):
-        from prophet import Prophet
-        
-        sql = f"""
-            SELECT 
-            data_date as ds, 
-            SUM(clicks) as y
-            FROM `{self.dataset}.{self.table_to_use}`
-            WHERE 
-            data_date BETWEEN "{self.dates['startDate']}" and "{self.dates['endDate']}"
-            {self.filters}
-            GROUP BY ds
-            """
-        
-        if self.estimate_cost:
-            return calculate_gbq_cost(sql, self.client)
-        else:
-            df = pandas_gbq.read_gbq(sql)
-            m = Prophet()
-            m.fit(df)
-            future = m.make_future_dataframe(periods=days)
-            forecast = m.predict(future)
-            return forecast 
-    
-    
     #brand vs non brand traffic evolution 
     def brand_vs_no_brand(self, brand_variants):
         
@@ -501,52 +476,7 @@ class Report_BQ:
             return (
                 df[df[keyword_column].isin(df2['query'])==False]
             )
-        
-    
-    #causal impact 
-    def causal_impact(self, intervention_date = None ):
-        
-        #we neeed some extra libraries for this method 
-        from causalimpact import CausalImpact
-        import datetime
-        
-        #interverntion date must be defined
-        if not intervention_date:
-            raise ValueError("Intervention_date must be dfined")
-        
-        sql = f"""
-            SELECT 
-            data_date as date, 
-            SUM(clicks) as clicks
-            FROM `{self.dataset}.{self.table_to_use}`
-            WHERE 
-            data_date BETWEEN "{self.dates['startDate']}" and "{self.dates['endDate']}"
-            {self.filters}
-            GROUP BY date
-            """
-        
-        if self.estimate_cost:
-            return calculate_gbq_cost(sql, self.client)
-        else:
-            df = pandas_gbq.read_gbq(sql)
-            #calculate the number of days between the last data point and the intervention date 
-            days = (pd.to_datetime(df['date']).max() - pd.to_datetime(intervention_date)).days
-            #get the prior dates 
-            max_date = pd.to_datetime(df['date']).max().strftime("%Y-%m-%d")
-            max_before_interenvention = utils.get_date_days_before(intervention_date, days=1)
-            min_before_intervention = utils.get_date_days_before(max_before_interenvention, days=days)
-
-            #get the interval for the analysis  
-            post_period = [intervention_date, max_date]
-            pre_priod = [min_before_intervention, max_before_interenvention]
-
-            #build the ci objec 
-            ci = CausalImpact(df.set_index('date').clicks, pre_period = pre_priod, post_period = post_period)
-            #return it 
-            #the rest of the method are controlled by https://pypi.org/project/pycausalimpact/
-            #usually ci.summary() or ci.plot() are enough
-            return ci 
-    
+            
     
     #fonctions to find potential contents to kill 
     def find_potential_contents_to_kill(self, sitemap_url=None, clicks_threshold = 0, impressions_threshold = 0):
