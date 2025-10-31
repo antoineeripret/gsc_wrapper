@@ -94,7 +94,6 @@ from base64 import b64encode
 from json import loads
 from json import dumps
 import pandas as pd 
-from tqdm import tqdm
 import time 
 
 class RestClient:
@@ -155,7 +154,7 @@ def create_jobs_and_get_ids(chunks, tag, location, client):
         )
         dataforseo_data.append(post_data)
 
-    for post_data in tqdm(dataforseo_data):
+    for post_data in dataforseo_data:
         # POST /v3/keywords_data/google_ads/search_volume/task_post
         response = client.post("/v3/keywords_data/google_ads/search_volume/task_post", post_data)
         # you can find the full list of the response codes here https://docs.dataforseo.com/v3/appendix/errors
@@ -192,7 +191,7 @@ def get_search_volume(jobs_id, client):
     results = []
     for task in response['tasks']:
         if (task['result'] and (len(task['result']) > 0)):
-            for resultTaskInfo in tqdm(task['result']):            
+            for resultTaskInfo in task['result']:
                 if(resultTaskInfo['id']):
                     results.append(client.get("/v3/keywords_data/google_ads/search_volume/task_get/" + resultTaskInfo['id']))
 
