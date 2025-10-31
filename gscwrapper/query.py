@@ -705,33 +705,6 @@ class Report:
 
         return final 
 
-    def forecast(self, days):
-        from prophet import Prophet
-        
-        #ensure that we have date as a dimension 
-        if 'date' not in self.dimensions:
-            raise ValueError('Your report needs a date dimension to call this method.')
-        
-        #ensure that we have clicks as a metric
-        if 'clicks' not in self.metrics:
-            raise ValueError('Your report needs clicks as a metric to call this method.')
-
-        df = (
-            self 
-            .df
-            .groupby('date', as_index=False)
-            .agg({'clicks': 'sum'})
-            .rename(
-                columns = {'date': 'ds', 'clicks': 'y'}
-            )
-        )
-
-        m = Prophet()
-        m.fit(df)
-        future = m.make_future_dataframe(periods=days)
-        forecast = m.predict(future)
-        return forecast 
-
     #brand vs non brand traffic evolution 
     def brand_vs_no_brand(self, brand_variants):
         
@@ -806,62 +779,6 @@ class Report:
             df[df[keyword_column].isin(self.df['query'])==False]
         )
         
-    #causal impact 
-    def causal_impact(self, intervention_date = None ):
-        """
-        Analyzes the causal impact of an intervention on the clicks metric over time.
-
-        This method uses the CausalImpact library to estimate the causal effect of an intervention on the clicks metric. It requires a specific intervention date to be defined.
-
-        Args:
-            intervention_date (str, optional): The date of the intervention in 'YYYY-MM-DD' format. Defaults to None.
-
-        Returns:
-            CausalImpact: An instance of the CausalImpact class, which can be used to analyze and visualize the causal impact of the intervention.
-        """
-        
-        #we neeed some extra libraries for this method 
-        from causalimpact import CausalImpact
-        import datetime
-        
-        #interverntion date must be defined
-        if not intervention_date:
-            raise ValueError("Intervention_date must be defined")
-        
-        #date must be a dimensions 
-        if 'date' not in self.dimensions:
-            raise ValueError('Your report needs a date dimension to call this method.')
-        
-        #clicks must be a metric
-        if 'clicks' not in self.metrics:
-            raise ValueError('Your report needs clicks as a metric to call this method.')
-
-
-        data = (
-            self
-            .df 
-            .filter(items=['date', 'clicks'])
-            .groupby('date', as_index=False)
-            .agg({'clicks': 'sum'})
-        )
-        
-        #calculate the number of days between the last data point and the intervention date 
-        days = (pd.to_datetime(data['date']).max() - pd.to_datetime(intervention_date)).days
-        #get the prior dates 
-        max_date = pd.to_datetime(data['date']).max().strftime("%Y-%m-%d")
-        max_before_interenvention = utils.get_date_days_before(intervention_date, days=1)
-        min_before_intervention = utils.get_date_days_before(max_before_interenvention, days=days)
-
-        #get the interval for the analysis  
-        post_period = [intervention_date, max_date]
-        pre_priod = [min_before_intervention, max_before_interenvention]
-
-        #build the ci objec 
-        ci = CausalImpact(data.set_index('date').clicks, pre_period = pre_priod, post_period = post_period)
-        #return it 
-        #the rest of the method are controlled by https://pypi.org/project/pycausalimpact/
-        #usually ci.summary() or ci.plot() are enough
-        return ci 
     
     def update_urls(self, redirect_mapping):
         """
@@ -1773,7 +1690,6 @@ class Report:
         Returns:
             pandas.DataFrame: A DataFrame containing the list of page URLs and their corresponding response codes.
         """
-        from tqdm import tqdm
         
         #we need the page dimension
         if 'page' not in self.dimensions:
@@ -1785,7 +1701,7 @@ class Report:
         response_codes = {}
         #we loop our pages and get  the response code 
         #and append it to the dict 
-        for page in tqdm(pages):
+        for page in pages:
             response_codes[page] = utils.get_response_code(page)
             if wait_time > 0:
                 time.sleep(wait_time)
