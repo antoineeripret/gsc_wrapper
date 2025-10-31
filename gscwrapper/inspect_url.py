@@ -32,12 +32,11 @@ class Inspect:
     
     def execute(self):
         import googleapiclient.errors
-        from tqdm import tqdm
         
         urls_to_check = self.urls_to_inspect.copy()
         self.results = []
         try: 
-            for url in tqdm(list(dict.fromkeys(urls_to_check))):
+            for url in list(dict.fromkeys(urls_to_check)):
                 time.sleep(1)
                 self.raw = {
                         "inspectionUrl": url,
