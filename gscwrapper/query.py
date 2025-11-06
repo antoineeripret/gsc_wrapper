@@ -1722,4 +1722,3 @@ class Report:
         )
         
         return self_copy
-

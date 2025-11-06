@@ -12,7 +12,7 @@ http://google-auth-oauthlib.readthedocs.io/en/latest/reference/google_auth_oauth
 
 import collections.abc
 import json, urllib
-from .account import Account, Account_BQ
+from .account import Account, AccountBQ
 
 # Define Oath scopes with read only access
 OAUTH_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly"
@@ -64,7 +64,7 @@ def generate_auth(
             )
         )
         
-        return Account_BQ(credentials, bigquery_dataset)
+        return AccountBQ(credentials, bigquery_dataset)
     
     if service_account_auth:
         credentials = (
