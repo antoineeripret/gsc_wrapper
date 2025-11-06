@@ -11,7 +11,6 @@ It provides an easy way to query and work with data from the following endpoints
 * [URL Inspection](https://developers.google.com/webmaster-tools/v1/urlInspection.index/urlInspection.index?hl=en)
 * [Sitemaps](https://developers.google.com/webmaster-tools/v1/sitemaps?hl=en)
 
-You can also use it to query your [GSC bulk data export](https://support.google.com/webmasters/answer/12918484?hl=en) without having to worry about writing SQL code. 
 
 ## Another GSC library? 
 
@@ -27,7 +26,6 @@ I've decided to create my own based on my most common needs as a SEO profesionna
 ## Documentation 
 
 - [Installation Instructions (API)](./README-API.md)
-- [Installation Instructions (BQ)](./README-BQ.md)
 - [List of methods](./README-METHODS.md)
 
 ## Can I run it in a Jupyter Notebook? 

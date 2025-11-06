@@ -1,5 +1,4 @@
-from . import query, query_bq, sitemap, inspect_url
-from google.cloud import bigquery
+from . import query, sitemap, inspect_url
 import pandas as pd
 from typing import List, Optional
 
@@ -13,55 +12,6 @@ VALID_PERMISSION_LEVELS = [
 UNVERIFIED_PERMISSION_INDICATOR = 'Unverified'
 DOMAIN_PROPERTY_PREFIX = 'sc-domain'
 
-
-class AccountBQ:
-    def __init__(self, credentials, dataset: str):
-        """
-        Initialize an AccountBQ object for BigQuery operations.
-
-        Args:
-            credentials: Google Cloud credentials object.
-            dataset: BigQuery dataset name in format 'project_id.dataset_name'.
-
-        Raises:
-            ValueError: If dataset format is invalid.
-        """
-        if not dataset or not isinstance(dataset, str):
-            raise ValueError('Dataset must be a non-empty string.')
-        if len(dataset.split('.')) != 2:
-            raise ValueError(
-                'Dataset name must be in the format project_id.dataset_name'
-            )
-        self.credentials = credentials
-        self.dataset = dataset
-        self.client = bigquery.Client(
-            credentials=credentials, project=credentials.project_id
-        )
-        self.tables = self.list_tables()
-        self.query = query_bq.Query_BQ(self.credentials, self.dataset)
-    
-    def list_tables(self) -> List[str]:
-        """
-        List all tables in the dataset.
-
-        Returns:
-            List of table IDs. Returns empty list if no tables exist.
-        """
-        tables = list(self.client.list_tables(self.dataset))
-        if len(tables) > 0:
-            attrs = [
-                attr for attr in dir(tables[0])
-                if not callable(getattr(tables[0], attr))
-                and not attr.startswith("_")
-            ]
-            tables_df = pd.DataFrame(columns=attrs)
-            for table in tables:
-                tables_df.loc[len(tables_df)] = [
-                    getattr(table, element) for element in tables_df.columns
-                ]
-            return tables_df.table_id.tolist()
-        else:
-            return []
 
 class Account:
     """

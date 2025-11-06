@@ -12,7 +12,7 @@ http://google-auth-oauthlib.readthedocs.io/en/latest/reference/google_auth_oauth
 
 import collections.abc
 import json, urllib
-from .account import Account, AccountBQ
+from .account import Account
 
 # Define Oath scopes with read only access
 OAUTH_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly"
@@ -28,8 +28,6 @@ def generate_auth(
     serialize=None, 
     flow="web", 
     service_account_auth=False, 
-    bigquery=False, 
-    bigquery_dataset=None, 
     port=8080, 
     google_colab = False 
     ):
@@ -42,29 +40,12 @@ def generate_auth(
         serialize (str, optional): The path to the serialized credentials file.
         flow (str, optional): The flow type. Supported values are 'web' and 'installed_app'.
         service_account_auth (bool, optional): If True, service account authentication is used. If False, OAuth2 authentication is used.
-        bigquery (bool, optional): If True, BigQuery authentication is used. If False, Google Search Console authentication is used.
-        bigquery_dataset (str, optional): The BigQuery dataset name.
         port (int, optional): The port number for the local server.
         google_colab (bool, optional): If True, the authentication is generated for Google Colab. If False, the authentication is generated for local use.
     
     Returns:
         object: The authentication object.
     """
-    
-    if bigquery:
-        if not bigquery_dataset:
-            raise ValueError('You must provide a dataset name.')
-        if len(bigquery_dataset.split('.')) != 2:
-            raise ValueError('Dataset name must be in the format project_id.dataset_name')
-        credentials = (
-            service_account
-            .Credentials
-            .from_service_account_file(
-                filename=client_config,
-            )
-        )
-        
-        return AccountBQ(credentials, bigquery_dataset)
     
     if service_account_auth:
         credentials = (
