@@ -123,6 +123,9 @@ def generate_auth(
         if isinstance(credentials, str):
             with open(credentials, 'r') as f:
                 credentials = json.load(f)
+        else: 
+            raise ValueError("Credentials must be a string or a dictionary")
+        
         credentials = Credentials(
             token=credentials['token'],
             refresh_token=credentials['refresh_token'],
