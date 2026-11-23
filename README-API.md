@@ -157,7 +157,7 @@ Please be aware that you may be affected by [data sampling](https://www.aeripret
 * **filter**: you can decide to analyse just a part of your website. You can filter using any dimension or operator included below: 
 
 ```python
-DIMENSIONS = ['country','device','page','query','searchAppearance','date', 'hour']
+DIMENSIONS = ['country','device','page','query','searchAppearance','date', 'hour', 'brandedClassification']
 OPERATORS = ['equals','notEquals','contains','notContains','includingRegex','excludingRegex']
 ```
 
@@ -165,12 +165,28 @@ If you use a REGEX, I strongly advise to test it using the GSC UI first, because
 
 **IMPORTANT**: you can filter on a dimension that is not included in your report. 
 
+`brandedClassification` only accepts the `equals` operator and the `BRANDED` / `NON_BRANDED` values, and cannot be combined with a `query` filter in the same request ([documentation](https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.filters.dimension)). 
+
 ```python 
 report = (
     webproperty
     .query
     .range(start="2023-01-01", stop="2023-02-01")
     .filter("page", "blog", "contains")
+    .dimensions(["date"])
+    .get()
+)
+```
+
+* **filter_list**: you can match several exact values for the `country` or `device` dimension in a single filter ([documentation](https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.filterLists)). A dimension cannot be used in both `filter` and `filter_list` in the same request. 
+
+```python 
+report = (
+    webproperty
+    .query
+    .range(start="2023-01-01", stop="2023-02-01")
+    .filter_list("country", ["fra", "bel"])
+    .filter_list("device", ["MOBILE", "TABLET"])
     .dimensions(["date"])
     .get()
 )

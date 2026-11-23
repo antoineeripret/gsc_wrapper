@@ -9,9 +9,12 @@ from .regex import WORD_DELIM
 #added here to follow DRY principle
 #this will also ease updates if the API changes
 
-DIMENSIONS = ['country','device','page','query','searchAppearance','date', 'hour']
+DIMENSIONS = ['country','device','page','query','searchAppearance','date', 'hour', 'brandedClassification']
 OPERATORS = ['equals','notEquals','contains','notContains','includingRegex','excludingRegex']
-SEARCH_TYPES = ['web', 'image', 'video', 'discover','googleNews','news']
+SEARCH_TYPES = ['web', 'image', 'video', 'discover','googleNews','news', 'webMultimodal']
+BRANDED_CLASSIFICATIONS = ['BRANDED','NON_BRANDED']
+#dimensions accepted in dimensionFilterGroups[].filterLists[]
+FILTER_LIST_DIMENSIONS = ['country','device']
 DATA_STATES = ['all','final', 'hourly_all']
 
 #this is not from the API but we'll use it to group data by period
@@ -102,6 +105,9 @@ class Query:
             #see https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.filters.dimension
             if element not in DIMENSIONS:
                 raise ValueError('{element} is not a valid dimension. Check https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.filters.dimension for the accepted values.')
+        #grouping by brandedClassification can't be combined with a query filter
+        if 'brandedClassification' in dimensions and 'query' in self._filtered_dimensions('filters'):
+            raise ValueError('brandedClassification cannot be combined with a query filter in the same request. Check https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.filters.dimension for more information.')
         #we update the raw request body
         self.raw['dimensions'] = dimensions
         return self
@@ -130,6 +136,20 @@ class Query:
         #check the operator 
         if operator not in OPERATORS:
             raise ValueError('Operator not valid. Check https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.filters.operator for the accepted values.')
+        #brandedClassification only supports the equals operator and two values
+        if dimension == 'brandedClassification':
+            if operator != 'equals':
+                raise ValueError('brandedClassification only supports the equals operator. Check https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.filters.dimension for more information.')
+            if expression not in BRANDED_CLASSIFICATIONS:
+                raise ValueError('brandedClassification must be BRANDED or NON_BRANDED. Check https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.filters.dimension for the accepted values.')
+        #filtering or grouping by brandedClassification can't be combined with a query filter
+        query_filtered = 'query' in self._filtered_dimensions('filters')
+        branded_used = 'brandedClassification' in self._filtered_dimensions('filters') + self.raw.get('dimensions', [])
+        if (dimension == 'brandedClassification' and query_filtered) or (dimension == 'query' and branded_used):
+            raise ValueError('brandedClassification cannot be combined with a query filter in the same request. Check https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.filters.dimension for more information.')
+        #a single request cannot filter on the same dimension in both filters and filterLists
+        if dimension in self._filtered_dimensions('filterLists'):
+            raise ValueError(f'{dimension} is already filtered with filter_list. Check https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.filterLists for more information.')
 
         dimension_filter = {
             'dimension': dimension,
@@ -147,8 +167,55 @@ class Query:
             self.raw.setdefault('dimensionFilterGroups', []).append(filter_group)
         else: 
             #if we do, we need to append the new filter to the existing one
-            self.raw['dimensionFilterGroups'][-1]['filters'].append(dimension_filter)
+            #the group may have been created by filter_list, without any filters key
+            self.raw['dimensionFilterGroups'][-1].setdefault('filters', []).append(dimension_filter)
         return self
+
+    #multi-value filter (exact match on any of the expressions)
+    #only available for the country and device dimensions
+    def filter_list(self, dimension, expressions, group_type='and'):
+        """
+        Applies a multi-value filter to the query: a row matches if its value for the dimension equals any of the expressions.
+
+        This method updates the query's raw request body with a new filter list, in the same filter group as the `filter` method. A dimension cannot be used in both `filter` and `filter_list` in the same request.
+
+        Args:
+            dimension (str): The dimension to which the filter list is applied ('country' or 'device').
+            expressions (list): The values to match (e.g. ['fra', 'bel'] or ['MOBILE', 'TABLET']).
+            group_type (str): The type of group to apply the filter list to. Defaults to 'and'.
+
+        Returns:
+            Query: The updated Query object.
+        """
+        #check that the values are correct
+        if dimension not in FILTER_LIST_DIMENSIONS:
+            raise ValueError('Dimension not valid. Check https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.filterLists.dimension for the accepted values.')
+        if not isinstance(expressions, list):
+            raise TypeError('Expressions must be a list.')
+        if not expressions:
+            raise ValueError('Please provide at least one expression.')
+        #a single request cannot filter on the same dimension in both filters and filterLists
+        if dimension in self._filtered_dimensions('filters'):
+            raise ValueError(f'{dimension} is already filtered with filter. Check https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.filterLists for more information.')
+
+        filter_list = {
+            'dimension': dimension,
+            'expressions': expressions
+        }
+        #same logic as the filter method: we use the last filter group, or create one
+        if 'dimensionFilterGroups' not in self.raw:
+            self.raw['dimensionFilterGroups'] = [{'groupType': group_type, 'filterLists': [filter_list]}]
+        else:
+            self.raw['dimensionFilterGroups'][-1].setdefault('filterLists', []).append(filter_list)
+        return self
+
+    #dimensions already filtered in the request, either in filters or in filterLists
+    def _filtered_dimensions(self, key):
+        return [
+            element['dimension']
+            for group in self.raw.get('dimensionFilterGroups', [])
+            for element in group.get(key, [])
+        ]
 
     #define the search type
     def search_type(self, search_type='web'):
