@@ -169,3 +169,43 @@ def test_filter_after_filter_list(query):
         'filterLists': [{'dimension': 'country', 'expressions': ['fra', 'bel']}],
         'filters': [{'dimension': 'page', 'expression': 'blog', 'operator': 'contains'}]
     }]
+
+
+# groupType
+
+@pytest.mark.parametrize('group_type', ['or', 'AND', 'And', ''])
+def test_filter_rejects_invalid_group_type(query, group_type):
+    """Test that filter only accepts the and group type (the only value accepted by the API)."""
+    with pytest.raises(ValueError, match='Group type not valid'):
+        query.filter('page', 'blog', 'contains', group_type=group_type)
+
+
+@pytest.mark.parametrize('group_type', ['or', 'AND', 'And', ''])
+def test_filter_list_rejects_invalid_group_type(query, group_type):
+    """Test that filter_list only accepts the and group type (the only value accepted by the API)."""
+    with pytest.raises(ValueError, match='Group type not valid'):
+        query.filter_list('country', ['fra', 'bel'], group_type=group_type)
+
+
+def test_filter_rejects_invalid_group_type_on_existing_group(query):
+    """Test that an invalid group type is rejected, not silently dropped, when a filter group already exists."""
+    query.filter('page', 'blog', 'contains')
+    with pytest.raises(ValueError, match='Group type not valid'):
+        query.filter('query', 'shoes', 'contains', group_type='or')
+
+
+def test_filter_list_rejects_invalid_group_type_on_existing_group(query):
+    """Test that an invalid group type is rejected, not silently dropped, when a filter group already exists."""
+    query.filter('page', 'blog', 'contains')
+    with pytest.raises(ValueError, match='Group type not valid'):
+        query.filter_list('country', ['fra', 'bel'], group_type='or')
+
+
+def test_explicit_and_group_type(query):
+    """Test that an explicit and group type is accepted by filter and filter_list."""
+    query.filter('page', 'blog', 'contains', group_type='and').filter_list('country', ['fra'], group_type='and')
+    assert query.raw['dimensionFilterGroups'] == [{
+        'groupType': 'and',
+        'filters': [{'dimension': 'page', 'expression': 'blog', 'operator': 'contains'}],
+        'filterLists': [{'dimension': 'country', 'expressions': ['fra']}]
+    }]

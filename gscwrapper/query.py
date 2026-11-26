@@ -16,6 +16,8 @@ BRANDED_CLASSIFICATIONS = ['BRANDED','NON_BRANDED']
 #dimensions accepted in dimensionFilterGroups[].filterLists[]
 FILTER_LIST_DIMENSIONS = ['country','device']
 DATA_STATES = ['all','final', 'hourly_all']
+#only value accepted in dimensionFilterGroups[].groupType
+GROUP_TYPES = ['and']
 
 #this is not from the API but we'll use it to group data by period
 PERIODS = ['D','W','M','Q','Y','QE','ME']
@@ -125,7 +127,7 @@ class Query:
             dimension (str): The dimension to which the filter is applied.
             expression (str): The expression to filter by.
             operator (str): The operator to use for the filter. Defaults to 'equals'.
-            group_type (str): The type of group to apply the filter to. Defaults to 'and' (only option available), 
+            group_type (str): The type of group to apply the filter to. Defaults to 'and' (only option available, any other value raises a ValueError).
 
         Returns:
             Query: The updated Query object.
@@ -136,6 +138,9 @@ class Query:
         #check the operator 
         if operator not in OPERATORS:
             raise ValueError('Operator not valid. Check https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.filters.operator for the accepted values.')
+        #check the group type
+        if group_type not in GROUP_TYPES:
+            raise ValueError('Group type not valid. Only "and" is accepted. Check https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.groupType for more information.')
         #brandedClassification only supports the equals operator and two values
         if dimension == 'brandedClassification':
             if operator != 'equals':
@@ -182,7 +187,7 @@ class Query:
         Args:
             dimension (str): The dimension to which the filter list is applied ('country' or 'device').
             expressions (list): The values to match (e.g. ['fra', 'bel'] or ['MOBILE', 'TABLET']).
-            group_type (str): The type of group to apply the filter list to. Defaults to 'and'.
+            group_type (str): The type of group to apply the filter list to. Defaults to 'and' (only option available, any other value raises a ValueError).
 
         Returns:
             Query: The updated Query object.
@@ -194,6 +199,8 @@ class Query:
             raise TypeError('Expressions must be a list.')
         if not expressions:
             raise ValueError('Please provide at least one expression.')
+        if group_type not in GROUP_TYPES:
+            raise ValueError('Group type not valid. Only "and" is accepted. Check https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.groupType for more information.')
         #a single request cannot filter on the same dimension in both filters and filterLists
         if dimension in self._filtered_dimensions('filters'):
             raise ValueError(f'{dimension} is already filtered with filter. Check https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.filterLists for more information.')

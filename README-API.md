@@ -165,6 +165,8 @@ If you use a REGEX, I strongly advise to test it using the GSC UI first, because
 
 **IMPORTANT**: you can filter on a dimension that is not included in your report. 
 
+`group_type` only accepts `and`, the only value supported by the API ([documentation](https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.groupType)). Any other value raises a `ValueError`, in both `filter` and `filter_list`. 
+
 `brandedClassification` only accepts the `equals` operator and the `BRANDED` / `NON_BRANDED` values, and cannot be combined with a `query` filter in the same request ([documentation](https://developers.google.com/webmaster-tools/v1/searchanalytics/query?hl=en#dimensionFilterGroups.filters.dimension)). 
 
 ```python 
